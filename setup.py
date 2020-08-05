@@ -6,7 +6,7 @@ except AttributeError:
     from setuptools import find_packages, setup
 
 NAME = 'OASYS1-PaNOSC'
-VERSION = '0.0.1'
+VERSION = '0.0.2'
 ISRELEASED = True
 
 DESCRIPTION = 'OASYS extension for PaNOSC'
@@ -46,35 +46,21 @@ INSTALL_REQUIRES = (
 PACKAGES = find_packages(exclude=('*.tests', '*.tests.*', 'tests.*', 'tests'))
 
 PACKAGE_DATA = {
-    "orangecontrib.panosc.wofry.widgets.extension":["icons/*.png", "icons/*.jpg"],
-    "orangecontrib.panosc.syned.widgets.extension":["icons/*.png", "icons/*.jpg"],
     "orangecontrib.panosc.shadow.widgets.extension":["icons/*.png", "icons/*.jpg", "miscellanea/*.txt"],
-    "orangecontrib.panosc.srw.widgets.extension":["icons/*.png", "icons/*.jpg"],
 }
 
 NAMESPACE_PACAKGES = ["orangecontrib",
                       "orangecontrib.panosc",
-                      "orangecontrib.panosc.wofry",
-                      "orangecontrib.panosc.syned",
                       "orangecontrib.panosc.shadow",
-                      "orangecontrib.panosc.srw",
-                      "orangecontrib.panosc.wofry.widgets",
-                      "orangecontrib.panosc.syned.widgets",
                       "orangecontrib.panosc.shadow.widgets",
-                      "orangecontrib.panosc.srw.widgets",
                       ]
 
 ENTRY_POINTS = {
-    'oasys.addons' : ("Wofry PaNOSC = orangecontrib.panosc.wofry",
-                      "Syned PaNOSC = orangecontrib.panosc.syned",
+    'oasys.addons' : (
                       "Shadow PaNOSC = orangecontrib.panosc.shadow",
-                      "SRW PaNOSC = orangecontrib.panosc.srw",
                       ),
     'oasys.widgets' : (
-        "Wofry PaNOSC Extension = orangecontrib.panosc.wofry.widgets.extension",
-        "Syned PaNOSC Extension = orangecontrib.panosc.syned.widgets.extension",
         "Shadow PaNOSC Extension = orangecontrib.panosc.shadow.widgets.extension",
-        "SRW PaNOSC Extension = orangecontrib.panosc.srw.widgets.extension",
     ),
     'oasys.menus' : ("panoscoasysmenu = orangecontrib.panosc.menu",)
 }
