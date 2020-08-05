@@ -12,11 +12,11 @@ To install the add-on as user:
 new entry "PaNOSCExtensions" in the add-on list. Check it and click "OK"
 + Restart Oasys.
 
-![addon menu](https://github.com/oasys-PaNOSC-kit/OASYS1-PaNOSC-Extensions/blob/master/images/image2.png "addon menu")
+![addon menu](https://github.com/PaNOSC-ViNYL/OASYS1-PaNOSC/blob/master/images/image2.png "addon menu")
 
 Once it is installed, it should populate the widget bar on the side.
 
-![side menu](https://github.com/oasys-PaNOSC-kit/OASYS1-PaNOSC-Extensions/blob/master/images/image1.png "side menu")
+![side menu](https://github.com/PaNOSC-ViNYL/OASYS1-PaNOSC/blob/master/images/image1.png "side menu")
 
 ## Install as developper
 
