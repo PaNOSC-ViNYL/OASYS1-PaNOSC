@@ -40,6 +40,7 @@ SETUP_REQUIRES = (
 
 INSTALL_REQUIRES = (
     'setuptools',
+    'openpmd-api',
 )
 
 PACKAGES = find_packages(exclude=('*.tests', '*.tests.*', 'tests.*', 'tests'))
@@ -64,14 +65,14 @@ NAMESPACE_PACAKGES = ["orangecontrib",
                       ]
 
 ENTRY_POINTS = {
-    'oasys.addons' : ("WOFRY PaNOSC = orangecontrib.panosc.wofry",
-                      "SYNED PaNOSC = orangecontrib.panosc.syned",
+    'oasys.addons' : ("Wofry PaNOSC = orangecontrib.panosc.wofry",
+                      "Syned PaNOSC = orangecontrib.panosc.syned",
                       "Shadow PaNOSC = orangecontrib.panosc.shadow",
                       "SRW PaNOSC = orangecontrib.panosc.srw",
                       ),
     'oasys.widgets' : (
-        "WOFRY PaNOSC Extension = orangecontrib.panosc.wofry.widgets.extension",
-        "SYNED PaNOSC Extension = orangecontrib.panosc.syned.widgets.extension",
+        "Wofry PaNOSC Extension = orangecontrib.panosc.wofry.widgets.extension",
+        "Syned PaNOSC Extension = orangecontrib.panosc.syned.widgets.extension",
         "Shadow PaNOSC Extension = orangecontrib.panosc.shadow.widgets.extension",
         "SRW PaNOSC Extension = orangecontrib.panosc.srw.widgets.extension",
     ),
