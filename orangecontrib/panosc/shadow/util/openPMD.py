@@ -3,7 +3,7 @@ import time
 import os
 import h5py
 import Shadow
-import numpy
+import numpy as np
 
 def loadShadowOpenPMD(filename):
     f = h5py.File(filename,'r')
@@ -62,8 +62,193 @@ def loadShadowOpenPMD(filename):
 
     return shadow_beam
 
+# NEW VERSION
 
+def saveShadowToHDF(oasysRaysObject, filename='ShadowOutput.h5', workspace_units_to_cm=100.0):
+    '''
+    Beam.getshonecol(colNo)
+    Extract a column from a shadow file (eg. begin.dat) or a Shadow.Beam instance.
+    The column are numbered in the fortran convention, i.e. starting from 1.
+    It returns a numpy.array filled with the values of the chosen column.
 
+    Inumpy.ts:
+       beam     : str instance with the name of the shadow file to be loaded. OR
+                  Shadow.Beam initialized instance.
+       col      : int for the chosen columns.
+
+    Outputs:
+       numpy.array 1-D with length numpy.INT.
+
+    Error:
+       if an error occurs an ArgsError is raised.
+
+    Possible choice for col are:
+             1   X spatial coordinate [user's unit]
+             2   Y spatial coordinate [user's unit]
+             3   Z spatial coordinate [user's unit]
+             4   Xp direction or divergence [rads]
+             5   Yp direction or divergence [rads]
+             6   Zp direction or divergence [rads]
+             7   X component of the electromagnetic vector (s-polariz)
+             8   Y component of the electromagnetic vector (s-polariz)
+             9   Z component of the electromagnetic vector (s-polariz)
+            10   Lost ray flag
+            11   Energy [eV]
+            12   Ray index
+            13   Optical path length
+            14   Phase (s-polarization) in rad
+            15   Phase (p-polarization) in rad
+            16   X component of the electromagnetic vector (p-polariz)
+            17   Y component of the electromagnetic vector (p-polariz)
+            18   Z component of the electromagnetic vector (p-polariz)
+            19   Wavelength [A]
+            20   R= SQRT(X^2+Y^2+Z^2)
+            21   angle from Y axis
+            22   the magnitude of the Electromagnetic vector
+            23   |E|^2 (total intensity)
+            24   total intensity for s-polarization
+            25   total intensity for p-polarization
+            26   K = 2 pi / lambda [A^-1]
+            27   K = 2 pi / lambda * col4 [A^-1]
+            28   K = 2 pi / lambda * col5 [A^-1]
+            29   K = 2 pi / lambda * col6 [A^-1]
+            30   S0-stokes = |Es|^2 + |Ep|^2
+            31   S1-stokes = |Es|^2 - |Ep|^2
+            32   S2-stokes = 2 |Es| |Ep| cos(phase_s-phase_p)
+            33   S3-stokes = 2 |Es| |Ep| sin(phase_s-phase_p)
+            34   Power = intensity(col 23) * energy (col 11)
+            35   Angle-X with Y: |arcsin(X')|
+            36   Angle-Z with Y: |arcsin(Z')|
+            37   Angle-X with Y: |arcsin(X') - mean(arcsin(X'))|
+            38   Angle-Z with Y: |arcsin(Z') - mean(arcsin(Z'))|
+    '''
+
+    SCALAR = api.Mesh_Record_Component.SCALAR
+    oasysRays = oasysRaysObject
+    try:
+        unit = workspace_units_to_cm  # Conversion to cm
+    except:
+        unit = 100.
+
+    # Unit_Dimension: length L, mass M, time T, electric current I, thermodynamic temperature theta, amount of substance N, luminous intensity J
+
+    series = api.Series(filename, api.Access_Type.create)
+
+    # get date
+    dateNow = time.strftime('%Y-%m-%d %H:%M:%S %z', time.localtime())
+
+    # default series settings
+    print("Default settings:")
+    print("basePath: ", series.base_path)
+    print("openPMD version: ", series.openPMD)
+    print("iteration format: ", series.iteration_format)
+
+    # openPMD standard
+    series.set_openPMD("1.1.0")
+    series.set_openPMD_extension(0)
+    series.set_author("Aljosa Hafner <aljosa.hafner@ceric-eric.eu>")
+
+    series.set_date(dateNow)
+    series.set_software("OASYS", "1.2")
+    series.set_comment("Example output from ShadowOui widget in OASYS.")
+
+    #     series.set_particles_path("rays")
+
+    n_iter = [0]
+    # new iteration
+    for n in n_iter:
+        cur_it = series.iterations[n]
+
+        nRays = oasysRays.nrays()
+
+        rays = cur_it.particles['rays']
+
+        # id
+        id = oasysRays.getshonecol(12)
+        d = api.Dataset(id.dtype, id.shape)
+
+        print(id.dtype, id.shape)
+        rays["id"][SCALAR].reset_dataset(d)
+        rays["id"][SCALAR].store_chunk(id)
+
+        # - position: m
+        # - direction: unitless
+        # - photonSPolarizationAmplitude: have to check
+        # - photonSPolarizationPhase: unitless
+        # - wavelength: nm
+
+        # Position
+        position = np.vstack((oasysRays.getshonecol(1),
+                              oasysRays.getshonecol(2),
+                              oasysRays.getshonecol(3)))  # 3xN
+
+        d = api.Dataset(position.dtype, position.shape)
+        rays["position"][SCALAR].reset_dataset(d)
+        rays["position"][SCALAR].set_unit_SI(unit / 1e2)  # <--------- recheck this.
+        rays["position"].set_unit_dimension({api.Unit_Dimension.L: 1.})  # m
+        rays["position"][SCALAR].store_chunk(position)
+
+        # Direction
+        direction = np.vstack((oasysRays.getshonecol(4),
+                               oasysRays.getshonecol(5),
+                               oasysRays.getshonecol(6))).T  # 3xN
+        d = api.Dataset(direction.dtype, direction.shape)
+        rays["direction"][SCALAR].reset_dataset(d)
+        rays["direction"][SCALAR].set_unit_SI(unit / 1e2)
+        rays["direction"][SCALAR].store_chunk(direction)
+
+        # Polarization of E-field, S-polarization
+        photonSPolarizationAmplitude = np.vstack((oasysRays.getshonecol(7),
+                                                  oasysRays.getshonecol(8),
+                                                  oasysRays.getshonecol(9))).T  # 3xN
+        d = api.Dataset(photonSPolarizationAmplitude.dtype, photonSPolarizationAmplitude.shape)
+        rays["photonSPolarizationAmplitude"][SCALAR].reset_dataset(d)
+        rays["photonSPolarizationAmplitude"][SCALAR].set_unit_SI(unit / 1e2)
+        rays["photonSPolarizationAmplitude"][SCALAR].store_chunk(photonSPolarizationAmplitude)
+
+        # Polarization of E-field, P-polarization
+        photonPPolarizationAmplitude = np.vstack((oasysRays.getshonecol(16),
+                                                  oasysRays.getshonecol(17),
+                                                  oasysRays.getshonecol(18))).T  # 3xN
+        d = api.Dataset(photonPPolarizationAmplitude.dtype, photonPPolarizationAmplitude.shape)
+        rays["photonPPolarizationAmplitude"][SCALAR].reset_dataset(d)
+        rays["photonPPolarizationAmplitude"][SCALAR].set_unit_SI(unit / 1e2)
+        rays["photonPPolarizationAmplitude"][SCALAR].store_chunk(photonPPolarizationAmplitude)
+
+        # Photon energy [1.602176634e−19 eV = J = kg m^2 s^-2]
+
+        wavelength = 1240 / oasysRays.getshonecol(11)
+
+        d = api.Dataset(wavelength.dtype, wavelength.shape)
+        rays["wavelength"][SCALAR].reset_dataset(d)
+        rays["wavelength"][SCALAR].set_unit_SI(1e-9)
+        rays["wavelength"].set_unit_dimension({api.Unit_Dimension.L: 1.})
+        rays["wavelength"][SCALAR].store_chunk(wavelength)
+
+        # Phase for S-polarized and P-polarized photons
+        photonSPolarizationPhase = oasysRays.getshonecol(14)
+        photonPPolarizationPhase = oasysRays.getshonecol(15)
+
+        d = api.Dataset(photonSPolarizationPhase.dtype, photonSPolarizationPhase.shape)
+        rays["photonSPolarizationPhase"][SCALAR].reset_dataset(d)
+        rays["photonSPolarizationPhase"][SCALAR].set_unit_SI(1.0)
+        rays["photonPPolarizationPhase"][SCALAR].reset_dataset(d)
+        rays["photonPPolarizationPhase"][SCALAR].set_unit_SI(1.0)
+        rays["photonSPolarizationPhase"][SCALAR].store_chunk(photonSPolarizationPhase)
+        rays["photonPPolarizationPhase"][SCALAR].store_chunk(photonPPolarizationPhase)
+
+        # Lost rays
+        particleStatus = oasysRays.getshonecol(10)
+        d = api.Dataset(particleStatus.dtype, particleStatus.shape)
+        rays["particleStatus"][SCALAR].reset_dataset(d)
+        rays["particleStatus"][SCALAR].set_unit_SI(1.0)
+        rays["particleStatus"][SCALAR].store_chunk(particleStatus)
+
+    series.flush()
+
+    del series
+
+# OLD VERSION
 
 def saveShadowToHDF(oasysRaysObject, filename='raytracing_out.h5', workspace_units_to_cm=100.0 ):
     '''
