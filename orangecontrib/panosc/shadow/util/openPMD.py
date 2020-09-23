@@ -3,32 +3,33 @@ import time
 import os
 import h5py
 import Shadow
+import numpy
 import numpy as np
 
 def loadShadowOpenPMD(filename):
     f = h5py.File(filename,'r')
 
-    x = f["/data/0/particles/rays/position/x"][:]
-    y = f["/data/0/particles/rays/position/y"][:]
-    z = f["/data/0/particles/rays/position/z"][:]
+    x = f["/data/0/particles/rays/position"][0,:]
+    y = f["/data/0/particles/rays/position"][1,:]
+    z = f["/data/0/particles/rays/position"][2,:]
 
-    vx = f["/data/0/particles/rays/direction/x"][:]
-    vy = f["/data/0/particles/rays/direction/y"][:]
-    vz = f["/data/0/particles/rays/direction/z"][:]
+    vx = f["/data/0/particles/rays/direction"][:,0]
+    vy = f["/data/0/particles/rays/direction"][:,1]
+    vz = f["/data/0/particles/rays/direction"][:,2]
 
-    Es_x = f["/data/0/particles/rays/eFieldSPolarisation/x"][:]
-    Es_y = f["/data/0/particles/rays/eFieldSPolarisation/y"][:]
-    Es_z = f["/data/0/particles/rays/eFieldSPolarisation/z"][:]
+    Es_x = f["/data/0/particles/rays/photonSPolarizationAmplitude"][:,0]
+    Es_y = f["/data/0/particles/rays/photonSPolarizationAmplitude"][:,1]
+    Es_z = f["/data/0/particles/rays/photonSPolarizationAmplitude"][:,2]
 
-    Ep_x = f["/data/0/particles/rays/eFieldPPolarisation/x"][:]
-    Ep_y = f["/data/0/particles/rays/eFieldPPolarisation/y"][:]
-    Ep_z = f["/data/0/particles/rays/eFieldPPolarisation/z"][:]
+    Ep_x = f["/data/0/particles/rays/photonPPolarizationAmplitude"][:,0]
+    Ep_y = f["/data/0/particles/rays/photonPPolarizationAmplitude"][:,1]
+    Ep_z = f["/data/0/particles/rays/photonPPolarizationAmplitude"][:,2]
 
     id = f["/data/0/particles/rays/id"][:]
-    lostRay = f["/data/0/particles/rays/lostRay"][:]
-    phaseS = f["/data/0/particles/rays/phase/sPol_r"][:]
-    phaseP = f["/data/0/particles/rays/phase/pPol_r"][:]
-    wavelength = f["/data/0/particles/rays/photonWavelength"][:]
+    lostRay = f["/data/0/particles/rays/particleStatus"][:]
+    phaseS = f["/data/0/particles/rays/photonSPolarizationPhase"][:]
+    phaseP = f["/data/0/particles/rays/photonPPolarizationPhase"][:]
+    wavelength = f["/data/0/particles/rays/wavelength"][:]
 
     f.close()
 
@@ -483,9 +484,6 @@ def saveShadowToHDF(oasysRaysObject, filename='ShadowOutput.h5', workspace_units
 
 if __name__ == "__main__":
 
-    import Shadow
-    import numpy
-
     def run_shadow(iwrite=0):
 
         #
@@ -539,7 +537,7 @@ if __name__ == "__main__":
 
         oe2.DUMMY = 100.0
         oe2.FHIT_C = 1
-        oe2.FILE_REFL = b'/users/srio/Oasys/si5_15.111'
+        oe2.FILE_REFL = b'/home/aljosa/Oasys/development_sprint/si5_15.111'
         oe2.FWRITE = 1
         oe2.F_CENTRAL = 1
         oe2.F_CRYSTAL = 1
@@ -706,9 +704,9 @@ if __name__ == "__main__":
     beam.write("star.05")
 
 
-    saveShadowToHDF(oasysRaysObject=beam, filename="tmp.h5")
+    saveShadowToHDF(oasysRaysObject=beam, filename="/home/aljosa/Oasys/development_sprint_2/tmp.h5")
 
-    beam2 = loadShadowOpenPMD("tmp.h5")
+    beam2 = loadShadowOpenPMD("/home/aljosa/Oasys/development_sprint_2/tmp.h5")
     Shadow.ShadowTools.plotxy(beam, 1, 3, nbins=101, nolost=1, title="Real space")
     Shadow.ShadowTools.plotxy(beam2, 1, 3, nbins=101, nolost=1, title="RELOADED : Real space")
     Shadow.ShadowTools.histo1(beam, 11, nbins=101, ref=23, nolost=1 )
