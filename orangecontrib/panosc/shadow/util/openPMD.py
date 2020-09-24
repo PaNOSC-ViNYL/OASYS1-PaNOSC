@@ -4,7 +4,6 @@ import os
 import h5py
 import Shadow
 import numpy
-import numpy as np
 
 def loadShadowOpenPMD(filename):
     '''
@@ -65,7 +64,7 @@ def loadShadowOpenPMD(filename):
     rays[:, 10 - 1] = lostRay
     rays[:, 14 - 1] = phaseS
     rays[:, 15 - 1] = phaseP
-    rays[:, 11 - 1] = 2 * numpy.pi / (wavelength * 1e-8) # wavenumber in cm^-1
+    rays[:, 11 - 1] = 2 * numpy.pi / (wavelength * 1e-7) # wavenumber in cm^-1
 
     print(wavelength)
 
@@ -149,7 +148,7 @@ def saveShadowToHDF(oasysRaysObject, filename='ShadowOutput.h5', workspace_units
         # - wavelength: nm
 
         # Position
-        position = np.vstack((oasysRays.getshonecol(1),
+        position = numpy.vstack((oasysRays.getshonecol(1),
                               oasysRays.getshonecol(2),
                               oasysRays.getshonecol(3)))  # 3xN
 
@@ -160,7 +159,7 @@ def saveShadowToHDF(oasysRaysObject, filename='ShadowOutput.h5', workspace_units
         rays["position"][SCALAR].store_chunk(position)
 
         # Direction
-        direction = np.vstack((oasysRays.getshonecol(4),
+        direction = numpy.vstack((oasysRays.getshonecol(4),
                                oasysRays.getshonecol(5),
                                oasysRays.getshonecol(6)))  # 3xN
         d = api.Dataset(direction.dtype, direction.shape)
@@ -169,7 +168,7 @@ def saveShadowToHDF(oasysRaysObject, filename='ShadowOutput.h5', workspace_units
         rays["direction"][SCALAR].store_chunk(direction)
 
         # Polarization of E-field, S-polarization
-        photonSPolarizationAmplitude = np.vstack((oasysRays.getshonecol(7),
+        photonSPolarizationAmplitude = numpy.vstack((oasysRays.getshonecol(7),
                                                   oasysRays.getshonecol(8),
                                                   oasysRays.getshonecol(9)))  # 3xN
         d = api.Dataset(photonSPolarizationAmplitude.dtype, photonSPolarizationAmplitude.shape)
@@ -178,7 +177,7 @@ def saveShadowToHDF(oasysRaysObject, filename='ShadowOutput.h5', workspace_units
         rays["photonSPolarizationAmplitude"][SCALAR].store_chunk(photonSPolarizationAmplitude)
 
         # Polarization of E-field, P-polarization
-        photonPPolarizationAmplitude = np.vstack((oasysRays.getshonecol(16),
+        photonPPolarizationAmplitude = numpy.vstack((oasysRays.getshonecol(16),
                                                   oasysRays.getshonecol(17),
                                                   oasysRays.getshonecol(18)))  # 3xN
         d = api.Dataset(photonPPolarizationAmplitude.dtype, photonPPolarizationAmplitude.shape)
@@ -674,7 +673,7 @@ if __name__ == "__main__":
     beam.write("star.05")
 
 
-    saveShadowToHDF(oasysRaysObject=beam, filename="/home/aljosa/Oasys/development_sprint_2/tmp.h5", workspace_units_to_cm=1e2)
+    saveShadowToHDF(oasysRaysObject=beam, filename="/home/aljosa/Oasys/development_sprint_2/tmp.h5")#, workspace_units_to_cm=1e-2)
 
     beam2 = loadShadowOpenPMD("/home/aljosa/Oasys/development_sprint_2/tmp.h5")
 
