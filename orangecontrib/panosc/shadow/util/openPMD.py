@@ -7,6 +7,15 @@ import numpy
 import numpy as np
 
 def loadShadowOpenPMD(filename):
+    '''
+    Parameters
+    ----------
+    filename: str
+
+    Output
+    ------
+    Shadow.Beam object
+    '''
     f = h5py.File(filename,'r')
 
     x = f["/data/0/particles/rays/position"][0,:]
@@ -67,61 +76,24 @@ def loadShadowOpenPMD(filename):
 
 def saveShadowToHDF(oasysRaysObject, filename='ShadowOutput.h5', workspace_units_to_cm=100.0):
     '''
+    Parameters
+    ----------
+    oasysRaysObject: Shadow.Beam object from Oasys
+
+    filename: str
+
+    workspace_units_to_cm: default is 100., otherwise take Oasys variable
+
+    Output
+    ------
+    hdf file according to the openPMD specification for raytracing
+
+    Description
+    -----------
     Beam.getshonecol(colNo)
     Extract a column from a shadow file (eg. begin.dat) or a Shadow.Beam instance.
     The column are numbered in the fortran convention, i.e. starting from 1.
     It returns a numpy.array filled with the values of the chosen column.
-
-    Inumpy.ts:
-       beam     : str instance with the name of the shadow file to be loaded. OR
-                  Shadow.Beam initialized instance.
-       col      : int for the chosen columns.
-
-    Outputs:
-       numpy.array 1-D with length numpy.INT.
-
-    Error:
-       if an error occurs an ArgsError is raised.
-
-    Possible choice for col are:
-             1   X spatial coordinate [user's unit]
-             2   Y spatial coordinate [user's unit]
-             3   Z spatial coordinate [user's unit]
-             4   Xp direction or divergence [rads]
-             5   Yp direction or divergence [rads]
-             6   Zp direction or divergence [rads]
-             7   X component of the electromagnetic vector (s-polariz)
-             8   Y component of the electromagnetic vector (s-polariz)
-             9   Z component of the electromagnetic vector (s-polariz)
-            10   Lost ray flag
-            11   Energy [eV]
-            12   Ray index
-            13   Optical path length
-            14   Phase (s-polarization) in rad
-            15   Phase (p-polarization) in rad
-            16   X component of the electromagnetic vector (p-polariz)
-            17   Y component of the electromagnetic vector (p-polariz)
-            18   Z component of the electromagnetic vector (p-polariz)
-            19   Wavelength [A]
-            20   R= SQRT(X^2+Y^2+Z^2)
-            21   angle from Y axis
-            22   the magnitude of the Electromagnetic vector
-            23   |E|^2 (total intensity)
-            24   total intensity for s-polarization
-            25   total intensity for p-polarization
-            26   K = 2 pi / lambda [A^-1]
-            27   K = 2 pi / lambda * col4 [A^-1]
-            28   K = 2 pi / lambda * col5 [A^-1]
-            29   K = 2 pi / lambda * col6 [A^-1]
-            30   S0-stokes = |Es|^2 + |Ep|^2
-            31   S1-stokes = |Es|^2 - |Ep|^2
-            32   S2-stokes = 2 |Es| |Ep| cos(phase_s-phase_p)
-            33   S3-stokes = 2 |Es| |Ep| sin(phase_s-phase_p)
-            34   Power = intensity(col 23) * energy (col 11)
-            35   Angle-X with Y: |arcsin(X')|
-            36   Angle-Z with Y: |arcsin(Z')|
-            37   Angle-X with Y: |arcsin(X') - mean(arcsin(X'))|
-            38   Angle-Z with Y: |arcsin(Z') - mean(arcsin(Z'))|
     '''
 
     SCALAR = api.Mesh_Record_Component.SCALAR
