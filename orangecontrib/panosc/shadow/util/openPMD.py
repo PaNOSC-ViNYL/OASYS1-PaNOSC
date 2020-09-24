@@ -22,17 +22,17 @@ def loadShadowOpenPMD(filename):
     y = f["/data/0/particles/rays/position"][1,:]
     z = f["/data/0/particles/rays/position"][2,:]
 
-    vx = f["/data/0/particles/rays/direction"][:,0]
-    vy = f["/data/0/particles/rays/direction"][:,1]
-    vz = f["/data/0/particles/rays/direction"][:,2]
+    vx = f["/data/0/particles/rays/direction"][0,:]
+    vy = f["/data/0/particles/rays/direction"][1,:]
+    vz = f["/data/0/particles/rays/direction"][2,:]
 
-    Es_x = f["/data/0/particles/rays/photonSPolarizationAmplitude"][:,0]
-    Es_y = f["/data/0/particles/rays/photonSPolarizationAmplitude"][:,1]
-    Es_z = f["/data/0/particles/rays/photonSPolarizationAmplitude"][:,2]
+    Es_x = f["/data/0/particles/rays/photonSPolarizationAmplitude"][0,:]
+    Es_y = f["/data/0/particles/rays/photonSPolarizationAmplitude"][1,:]
+    Es_z = f["/data/0/particles/rays/photonSPolarizationAmplitude"][2,:]
 
-    Ep_x = f["/data/0/particles/rays/photonPPolarizationAmplitude"][:,0]
-    Ep_y = f["/data/0/particles/rays/photonPPolarizationAmplitude"][:,1]
-    Ep_z = f["/data/0/particles/rays/photonPPolarizationAmplitude"][:,2]
+    Ep_x = f["/data/0/particles/rays/photonPPolarizationAmplitude"][0,:]
+    Ep_y = f["/data/0/particles/rays/photonPPolarizationAmplitude"][1,:]
+    Ep_z = f["/data/0/particles/rays/photonPPolarizationAmplitude"][2,:]
 
     id = f["/data/0/particles/rays/id"][:]
     lostRay = f["/data/0/particles/rays/particleStatus"][:]
@@ -68,7 +68,6 @@ def loadShadowOpenPMD(filename):
     rays[:, 11 - 1] = 2 * numpy.pi / (wavelength * 1e-8) # wavenumber in cm^-1
 
     print(wavelength)
-
 
     return shadow_beam
 
@@ -140,7 +139,6 @@ def saveShadowToHDF(oasysRaysObject, filename='ShadowOutput.h5', workspace_units
         id = oasysRays.getshonecol(12)
         d = api.Dataset(id.dtype, id.shape)
 
-        print(id.dtype, id.shape)
         rays["id"][SCALAR].reset_dataset(d)
         rays["id"][SCALAR].store_chunk(id)
 
@@ -164,7 +162,7 @@ def saveShadowToHDF(oasysRaysObject, filename='ShadowOutput.h5', workspace_units
         # Direction
         direction = np.vstack((oasysRays.getshonecol(4),
                                oasysRays.getshonecol(5),
-                               oasysRays.getshonecol(6))).T  # 3xN
+                               oasysRays.getshonecol(6)))  # 3xN
         d = api.Dataset(direction.dtype, direction.shape)
         rays["direction"][SCALAR].reset_dataset(d)
         rays["direction"][SCALAR].set_unit_SI(unit / 1e2)
@@ -173,7 +171,7 @@ def saveShadowToHDF(oasysRaysObject, filename='ShadowOutput.h5', workspace_units
         # Polarization of E-field, S-polarization
         photonSPolarizationAmplitude = np.vstack((oasysRays.getshonecol(7),
                                                   oasysRays.getshonecol(8),
-                                                  oasysRays.getshonecol(9))).T  # 3xN
+                                                  oasysRays.getshonecol(9)))  # 3xN
         d = api.Dataset(photonSPolarizationAmplitude.dtype, photonSPolarizationAmplitude.shape)
         rays["photonSPolarizationAmplitude"][SCALAR].reset_dataset(d)
         rays["photonSPolarizationAmplitude"][SCALAR].set_unit_SI(unit / 1e2)
@@ -182,7 +180,7 @@ def saveShadowToHDF(oasysRaysObject, filename='ShadowOutput.h5', workspace_units
         # Polarization of E-field, P-polarization
         photonPPolarizationAmplitude = np.vstack((oasysRays.getshonecol(16),
                                                   oasysRays.getshonecol(17),
-                                                  oasysRays.getshonecol(18))).T  # 3xN
+                                                  oasysRays.getshonecol(18)))  # 3xN
         d = api.Dataset(photonPPolarizationAmplitude.dtype, photonPPolarizationAmplitude.shape)
         rays["photonPPolarizationAmplitude"][SCALAR].reset_dataset(d)
         rays["photonPPolarizationAmplitude"][SCALAR].set_unit_SI(unit / 1e2)
@@ -676,10 +674,12 @@ if __name__ == "__main__":
     beam.write("star.05")
 
 
-    saveShadowToHDF(oasysRaysObject=beam, filename="/home/aljosa/Oasys/development_sprint_2/tmp.h5")
+    saveShadowToHDF(oasysRaysObject=beam, filename="/home/aljosa/Oasys/development_sprint_2/tmp.h5", workspace_units_to_cm=1e2)
 
     beam2 = loadShadowOpenPMD("/home/aljosa/Oasys/development_sprint_2/tmp.h5")
-    Shadow.ShadowTools.plotxy(beam, 1, 3, nbins=101, nolost=1, title="Real space")
-    Shadow.ShadowTools.plotxy(beam2, 1, 3, nbins=101, nolost=1, title="RELOADED : Real space")
-    Shadow.ShadowTools.histo1(beam, 11, nbins=101, ref=23, nolost=1 )
-    Shadow.ShadowTools.histo1(beam2,11, nbins=101, ref=23, nolost=1 )
+
+    compare_rays(beam2,beam)
+    # Shadow.ShadowTools.plotxy(beam, 1, 3, nbins=101, nolost=1, title="Real space")
+    # Shadow.ShadowTools.plotxy(beam2, 1, 3, nbins=101, nolost=1, title="RELOADED : Real space")
+    # Shadow.ShadowTools.histo1(beam, 11, nbins=101, ref=23, nolost=1 )
+    # Shadow.ShadowTools.histo1(beam2,11, nbins=101, ref=23, nolost=1 )
