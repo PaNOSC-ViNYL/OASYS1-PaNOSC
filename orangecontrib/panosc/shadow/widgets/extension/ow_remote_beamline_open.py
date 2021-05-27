@@ -101,6 +101,72 @@ class RemoteBeamlineLoader(oasyswidget.OWWidget):
 
         return empty_element
 
+
+    def open_remote_scheme(self):
+        """Open a new scheme. Return QDialog.Rejected if the user canceled
+        the operation and QDialog.Accepted otherwise.
+
+        """
+        document = self.current_document()
+        if document.isModifiedStrict():
+            if self.ask_save_changes() == QDialog.Rejected:
+                return QDialog.Rejected
+
+        dlg = QInputDialog(self)
+        dlg.setInputMode(QInputDialog.TextInput)
+        dlg.setWindowTitle(self.tr("Open Remote Orange Workflow File"))
+        dlg.setLabelText("URL:")
+        dlg.setTextValue(self.tr("http://"))
+        dlg.resize(500, 50)
+        ok = dlg.exec_()
+        url = dlg.textValue()
+
+        if ok == 1 and url:
+            return self.load_scheme(url)
+        else:
+            return QDialog.Rejected
+
+    def recent_scheme(self, *args):
+        """Browse recent schemes. Return QDialog.Rejected if the user
+        canceled the operation and QDialog.Accepted otherwise.
+
+        """
+        items = [previewmodel.PreviewItem(name=title, path=path)
+                 for title, path in self.recent_schemes]
+        model = previewmodel.PreviewModel(items=items)
+
+        dialog = previewdialog.PreviewDialog(self)
+        title = self.tr("Recent Workflows")
+        dialog.setWindowTitle(title)
+        template = ('<h3 style="font-size: 26px">\n'
+                    #'<img height="26" src="canvas_icons:Recent.svg">\n'
+                    '{0}\n'
+                    '</h3>')
+        dialog.setHeading(template.format(title))
+        dialog.setModel(model)
+
+        model.delayedScanUpdate()
+
+        status = dialog.exec_()
+
+        index = dialog.currentIndex()
+
+        dialog.deleteLater()
+        model.deleteLater()
+
+        if status == QDialog.Accepted:
+            doc = self.current_document()
+            if doc.isModifiedStrict():
+                if self.ask_save_changes() == QDialog.Rejected:
+                    return QDialog.Rejected
+
+            selected = model.item(index)
+
+            return self.load_scheme(six.text_type(selected.path()))
+
+        return status
+
+
 if __name__ == "__main__":
     import sys
     from PyQt5.QtWidgets import QApplication
