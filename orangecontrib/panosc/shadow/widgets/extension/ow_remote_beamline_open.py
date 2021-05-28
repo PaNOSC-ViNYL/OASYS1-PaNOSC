@@ -101,6 +101,7 @@ class RemoteBeamlineLoader(oasyswidget.OWWidget):
 
         return empty_element
 
+    # Code for opening remote OWS (from welcome dialogue)
 
     def open_remote_scheme(self):
         """Open a new scheme. Return QDialog.Rejected if the user canceled
@@ -125,6 +126,8 @@ class RemoteBeamlineLoader(oasyswidget.OWWidget):
             return self.load_scheme(url)
         else:
             return QDialog.Rejected
+
+    # Code for opening recent OWS (from welcome dialogue)
 
     def recent_scheme(self, *args):
         """Browse recent schemes. Return QDialog.Rejected if the user
