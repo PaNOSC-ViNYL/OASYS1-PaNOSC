@@ -1,7 +1,7 @@
 import os, numpy
 
 from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtWidgets import QDialog, QInputDialog
+from PyQt5.QtWidgets import QDialog, QInputDialog, QListWidget
 from orangewidget import gui,widget
 from orangewidget.settings import Setting
 from oasys.widgets import gui as oasysgui, congruence
@@ -30,7 +30,7 @@ class RemoteBeamlineLoader(oasyswidget.OWWidget):
     want_main_area = 0
 
     beam_file_name = Setting("")
-
+    repository = Setting("https://raw.githubusercontent.com/PaNOSC-ViNYL/Oasys-PaNOSC-Workspaces/master/mainList.json")
     outputs = [{"name": "Beam",
                 "type": ShadowBeam,
                 "doc": "Shadow Beam",
@@ -39,13 +39,6 @@ class RemoteBeamlineLoader(oasyswidget.OWWidget):
     def __init__(self):
         super().__init__()
 
-        # self.runaction = widget.OWAction("Read Shadow File", self)
-        # self.runaction.triggered.connect(self.read_file)
-        # self.addAction(self.runaction)
-
-        # self.setFixedWidth(590)
-        # self.setFixedHeight(150)
-
         """Browse recent schemes. Return QDialog.Rejected if the user
         canceled the operation and QDialog.Accepted otherwise.
 
@@ -53,46 +46,83 @@ class RemoteBeamlineLoader(oasyswidget.OWWidget):
 
         ## https://raw.githubusercontent.com/PaNOSC-ViNYL/Oasys-PaNOSC-Workspaces/master/mainList.json
         # https://github.com/PaNOSC-ViNYL/Oasys-PaNOSC-Workspaces
+        #
+        # self.setFixedWidth(590)
+        # self.setFixedHeight(300)
 
+        wWidth = 650
+        wHeight = 400
+
+        main_box = oasysgui.widgetBox(self.controlArea, "", orientation="vertical", width=wWidth, height=wHeight)
+
+        self.le_repoName = oasysgui.lineEdit(main_box, self, "repository", "Repository JSON: ", labelWidth=105, valueType=str, orientation="horizontal")
+
+        upper_box = oasysgui.widgetBox(main_box, "", orientation="horizontal", width=wWidth-10, height=wHeight-75)
+
+        left_box = oasysgui.widgetBox(upper_box, "List of workspaces", orientation="vertical",
+                                        width=wWidth/2.-10., height=wHeight-80)
+
+        self.beamlineList = gui.listBox(left_box, self)
+
+        right_box = oasysgui.widgetBox(upper_box, "Metadata", addSpace=True,
+                                        orientation="vertical",
+                                        width=wWidth/2.-10., height=wHeight-80)
+
+        self.box_metaData = oasysgui.widgetBox(right_box, "", orientation="vertical")
+
+        gui.separator(main_box, height=5)
+
+        button = gui.button(main_box, self, "Select")#, callback=self.read_file)
+        button.setFixedHeight(40)
+
+        gui.rubber(self.controlArea)
         urlJson = "https://raw.githubusercontent.com/PaNOSC-ViNYL/Oasys-PaNOSC-Workspaces/master/mainList.json"
         response = urllib.request.urlopen(urlJson)
         beamlineJson = json.loads(response.read())
 
-        
+        beamlines = beamlineJson['OASYS_Remote_Workspaces_PaNOSC']['beamlines']
+        numberOfBeamlines = len(beamlines)
+        namesOfBeamlines = []
 
-        self.remote_schemes = []
-        items = [previewmodel.PreviewItem(name=title, path=path)
-                 for title, path in self.recent_schemes]
-        model = previewmodel.PreviewModel(items=items)
 
-        dialog = previewdialog.PreviewDialog(self)
-        title = self.tr("Recent Workflows")
-        dialog.setWindowTitle(title)
-        template = ('<h3 style="font-size: 26px">\n'
-                    #'<img height="26" src="canvas_icons:Recent.svg">\n'
-                    '{0}\n'
-                    '</h3>')
-        dialog.setHeading(template.format(title))
-        dialog.setModel(model)
+        for i, beamline in enumerate(beamlines):
+            currentName = beamline['institute'] + ' - ' + beamline['name']
+            namesOfBeamlines.append(currentName)
+            self.beamlineList.insertItem(i, currentName)
 
-        model.delayedScanUpdate()
-
-        status = dialog.exec_()
-
-        index = dialog.currentIndex()
-
-        dialog.deleteLater()
-        model.deleteLater()
-
-        if status == QDialog.Accepted:
-            doc = self.current_document()
-            if doc.isModifiedStrict():
-                if self.ask_save_changes() == QDialog.Rejected:
-                    return QDialog.Rejected
-
-            selected = model.item(index)
-
-            return self.load_scheme(six.text_type(selected.path()))
+        # self.remote_schemes = []
+        # items = [previewmodel.PreviewItem(name=title, path=path)
+        #          for title, path in self.recent_schemes]
+        # model = previewmodel.PreviewModel(items=items)
+        #
+        # dialog = previewdialog.PreviewDialog(self)
+        # title = self.tr("Recent Workflows")
+        # dialog.setWindowTitle(title)
+        # template = ('<h3 style="font-size: 26px">\n'
+        #             #'<img height="26" src="canvas_icons:Recent.svg">\n'
+        #             '{0}\n'
+        #             '</h3>')
+        # dialog.setHeading(template.format(title))
+        # dialog.setModel(model)
+        #
+        # model.delayedScanUpdate()
+        #
+        # status = dialog.exec_()
+        #
+        # index = dialog.currentIndex()
+        #
+        # dialog.deleteLater()
+        # model.deleteLater()
+        #
+        # if status == QDialog.Accepted:
+        #     doc = self.current_document()
+        #     if doc.isModifiedStrict():
+        #         if self.ask_save_changes() == QDialog.Rejected:
+        #             return QDialog.Rejected
+        #
+        #     selected = model.item(index)
+        #
+        #     return self.load_scheme(six.text_type(selected.path()))
 
         # return status
 
