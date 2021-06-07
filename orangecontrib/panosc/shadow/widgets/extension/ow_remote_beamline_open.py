@@ -15,7 +15,7 @@ from orangecontrib.shadow.util.shadow_objects import ShadowBeam, ShadowOpticalEl
 from orangecontrib.panosc.shadow.util.openPMD import loadShadowOpenPMD
 from orangecanvas.preview import previewdialog, previewmodel
 
-import six
+# import six
 
 class RemoteBeamlineLoader(oasyswidget.OWWidget):
     name = "Remote Repository Beamline Loader"
@@ -55,18 +55,18 @@ class RemoteBeamlineLoader(oasyswidget.OWWidget):
 
         main_box = oasysgui.widgetBox(self.controlArea, "", orientation="vertical", width=wWidth, height=wHeight)
 
-        self.le_repoName = oasysgui.lineEdit(main_box, self, "repository", "Repository JSON: ", labelWidth=105, valueType=str, orientation="horizontal")
+        self.le_repoName = oasysgui.lineEdit(main_box, self, "repository", "Repository JSON URL: ", labelWidth=150, valueType=str, orientation="vertical")
 
         upper_box = oasysgui.widgetBox(main_box, "", orientation="horizontal", width=wWidth-10, height=wHeight-75)
 
         left_box = oasysgui.widgetBox(upper_box, "List of workspaces", orientation="vertical",
-                                        width=wWidth/2.-10., height=wHeight-80)
+                                        width=wWidth/2.-8., height=wHeight-80)
 
         self.beamlineList = gui.listBox(left_box, self)
 
         right_box = oasysgui.widgetBox(upper_box, "Metadata", addSpace=True,
                                         orientation="vertical",
-                                        width=wWidth/2.-10., height=wHeight-80)
+                                        width=wWidth/2.-8., height=wHeight-80)
 
         self.box_metaData = oasysgui.widgetBox(right_box, "", orientation="vertical")
 
@@ -76,8 +76,8 @@ class RemoteBeamlineLoader(oasyswidget.OWWidget):
         button.setFixedHeight(40)
 
         gui.rubber(self.controlArea)
-        urlJson = "https://raw.githubusercontent.com/PaNOSC-ViNYL/Oasys-PaNOSC-Workspaces/master/mainList.json"
-        response = urllib.request.urlopen(urlJson)
+        # urlJson = "https://raw.githubusercontent.com/PaNOSC-ViNYL/Oasys-PaNOSC-Workspaces/master/mainList.json"
+        response = urllib.request.urlopen(self.repository)
         beamlineJson = json.loads(response.read())
 
         beamlines = beamlineJson['OASYS_Remote_Workspaces_PaNOSC']['beamlines']
@@ -169,23 +169,6 @@ class RemoteBeamlineLoader(oasyswidget.OWWidget):
         except Exception as exception:
             QtWidgets.QMessageBox.critical(self, "Error",
                                        str(exception), QtWidgets.QMessageBox.Ok)
-
-
-    def create_dummy_oe(self):
-        empty_element = ShadowOpticalElement.create_empty_oe()
-
-        empty_element._oe.DUMMY = self.workspace_units_to_cm
-
-        empty_element._oe.T_SOURCE     = 0.0
-        empty_element._oe.T_IMAGE = 0.0
-        empty_element._oe.T_INCIDENCE  = 0.0
-        empty_element._oe.T_REFLECTION = 180.0
-        empty_element._oe.ALPHA        = 0.0
-
-        empty_element._oe.FWRITE = 3
-        empty_element._oe.F_ANGLE = 0
-
-        return empty_element
 
     # Code for opening remote OWS (from welcome dialogue)
 
