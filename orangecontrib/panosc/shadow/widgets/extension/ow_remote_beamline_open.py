@@ -30,6 +30,8 @@ class RemoteBeamlineLoader(oasyswidget.OWWidget):
     want_main_area = 0
 
     beam_file_name = Setting("")
+    selectedIndex = Setting([0])
+    selectedURL = Setting("")
     repository = Setting("https://raw.githubusercontent.com/PaNOSC-ViNYL/Oasys-PaNOSC-Workspaces/master/mainList.json")
     outputs = [{"name": "Beam",
                 "type": ShadowBeam,
@@ -53,41 +55,53 @@ class RemoteBeamlineLoader(oasyswidget.OWWidget):
         wWidth = 650
         wHeight = 400
 
-        main_box = oasysgui.widgetBox(self.controlArea, "", orientation="vertical", width=wWidth, height=wHeight)
+        main_box = oasysgui.widgetBox(self.controlArea, "", orientation="vertical", width=wWidth-20, height=wHeight-20)
 
-        self.le_repoName = oasysgui.lineEdit(main_box, self, "repository", "Repository JSON URL: ", labelWidth=150, valueType=str, orientation="vertical")
+        self.le_repoName = oasysgui.lineEdit(main_box, self, "repository", "Repository JSON URL: ", labelWidth=150,
+                                             valueType=str, orientation="vertical", callbackOnType=self.changeRepoURL)
 
-        upper_box = oasysgui.widgetBox(main_box, "", orientation="horizontal", width=wWidth-10, height=wHeight-75)
+        upper_box = oasysgui.widgetBox(main_box, "", orientation="horizontal", width=wWidth-20, height=wHeight-80)
 
         left_box = oasysgui.widgetBox(upper_box, "List of workspaces", orientation="vertical",
-                                        width=wWidth/2.-8., height=wHeight-80)
+                                        width=wWidth/2.-13., height=wHeight-120)
 
-        self.beamlineList = gui.listBox(left_box, self)
+        self.beamlineList = gui.listBox(left_box, self, "selectedIndex", callback=self.selectedItemListBox)
 
         right_box = oasysgui.widgetBox(upper_box, "Metadata", addSpace=True,
                                         orientation="vertical",
-                                        width=wWidth/2.-8., height=wHeight-80)
+                                        width=wWidth/2.-12., height=wHeight-120)
 
-        self.box_metaData = oasysgui.widgetBox(right_box, "", orientation="vertical")
+        self.metadataLabel = ""
+        self.md_label = "%(metadataLabel)s"
+        self.box_metaData = gui.label(right_box, self, self.md_label, orientation="vertical")
 
-        gui.separator(main_box, height=5)
+        gui.separator(main_box, height=10)
 
-        button = gui.button(main_box, self, "Select")#, callback=self.read_file)
-        button.setFixedHeight(40)
+        button = gui.button(main_box, self, "Select and open...", callback=self.open_selected_scheme)
+        button.setFixedHeight(38)
 
         gui.rubber(self.controlArea)
         # urlJson = "https://raw.githubusercontent.com/PaNOSC-ViNYL/Oasys-PaNOSC-Workspaces/master/mainList.json"
+        self.changeRepoURL()
+
+    def changeRepoURL(self):
+
         response = urllib.request.urlopen(self.repository)
         beamlineJson = json.loads(response.read())
 
         beamlines = beamlineJson['OASYS_Remote_Workspaces_PaNOSC']['beamlines']
-        numberOfBeamlines = len(beamlines)
         namesOfBeamlines = []
+        self.metadataList = []
+        self.urlsOfBeamlines = []
 
 
         for i, beamline in enumerate(beamlines):
             currentName = beamline['institute'] + ' - ' + beamline['name']
+            currentURL = beamline['url_workspace']
+            currentMetadata = "Institute: " + beamline['institute'] + "\n" + "Beamline: " + beamline['name'] + "\n" + "Creator: " + beamline['uploaded_by'] + "\n" + "Date: " + beamline['date'] + "\n" + "Other info: " + beamline['url_info']
             namesOfBeamlines.append(currentName)
+            self.metadataList.append(currentMetadata)
+            self.urlsOfBeamlines.append(currentURL)
             self.beamlineList.insertItem(i, currentName)
 
         # self.remote_schemes = []
@@ -172,29 +186,30 @@ class RemoteBeamlineLoader(oasyswidget.OWWidget):
 
     # Code for opening remote OWS (from welcome dialogue)
 
-    def open_remote_scheme(self):
+    def selectedItemListBox(self):
+        self.selectedURL = self.urlsOfBeamlines[self.selectedIndex[0]]
+        self.metadataLabel = self.metadataList[self.selectedIndex[0]]
+
+    def open_selected_scheme(self):
         """Open a new scheme. Return QDialog.Rejected if the user canceled
         the operation and QDialog.Accepted otherwise.
 
         """
-        document = self.current_document()
-        if document.isModifiedStrict():
-            if self.ask_save_changes() == QDialog.Rejected:
-                return QDialog.Rejected
-
-        dlg = QInputDialog(self)
-        dlg.setInputMode(QInputDialog.TextInput)
-        dlg.setWindowTitle(self.tr("Open Remote Orange Workflow File"))
-        dlg.setLabelText("URL:")
-        dlg.setTextValue(self.tr("http://"))
-        dlg.resize(500, 50)
-        ok = dlg.exec_()
-        url = dlg.textValue()
-
-        if ok == 1 and url:
-            return self.load_scheme(url)
-        else:
-            return QDialog.Rejected
+        # document = self.current_document()
+        # if document.isModifiedStrict():
+        #     if self.ask_save_changes() == QDialog.Rejected:
+        #         return QDialog.Rejected
+        #
+        # dlg = QInputDialog(self)
+        # dlg.setInputMode(QInputDialog.TextInput)
+        # dlg.setWindowTitle(self.tr("Open Remote Orange Workflow File"))
+        # dlg.setLabelText("URL:")
+        # dlg.setTextValue(self.tr("http://"))
+        # dlg.resize(500, 50)
+        # ok = dlg.exec_()
+        # url = dlg.textValue()
+        #
+        return self.load_scheme(self.selectedURL)
 
     # Code for opening recent OWS (from welcome dialogue)
 
