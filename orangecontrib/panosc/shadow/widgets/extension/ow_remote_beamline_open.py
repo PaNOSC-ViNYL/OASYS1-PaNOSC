@@ -20,7 +20,7 @@ from orangecanvas.preview import previewdialog, previewmodel
 class RemoteBeamlineLoader(oasyswidget.OWWidget):
     name = "Remote Repository Beamline Loader"
     description = "Utility: Remote Repository Beamline Loader"
-    icon = "icons/beam_file_reader.png"
+    icon = "icons/remote_beamline_open.png"
     maintainer = "Aljosa Hafner"
     maintainer_email = "aljosa.hafner(@at@)ceric-eric.eu"
     priority = 2
