@@ -10,9 +10,7 @@ from oasys.widgets import widget as oasyswidget
 import json
 import urllib.request
 
-from orangecontrib.shadow.util.shadow_objects import ShadowBeam, ShadowOpticalElement, ShadowOEHistoryItem
-
-from orangecontrib.panosc.shadow.util.openPMD import loadShadowOpenPMD
+from orangecanvas.application.canvasmain import CanvasMainWindow
 from orangecanvas.preview import previewdialog, previewmodel
 
 # import six
@@ -33,10 +31,6 @@ class RemoteBeamlineLoader(oasyswidget.OWWidget):
     selectedIndex = Setting([0])
     selectedURL = Setting("")
     repository = Setting("https://raw.githubusercontent.com/PaNOSC-ViNYL/Oasys-PaNOSC-Workspaces/master/mainList.json")
-    outputs = [{"name": "Beam",
-                "type": ShadowBeam,
-                "doc": "Shadow Beam",
-                "id": "beam"}, ]
 
     def __init__(self):
         super().__init__()
@@ -81,7 +75,7 @@ class RemoteBeamlineLoader(oasyswidget.OWWidget):
         button.setFixedHeight(38)
 
         gui.rubber(self.controlArea)
-        # urlJson = "https://raw.githubusercontent.com/PaNOSC-ViNYL/Oasys-PaNOSC-Workspaces/master/mainList.json"
+
         self.changeRepoURL()
 
     def changeRepoURL(self):
@@ -103,86 +97,6 @@ class RemoteBeamlineLoader(oasyswidget.OWWidget):
             self.metadataList.append(currentMetadata)
             self.urlsOfBeamlines.append(currentURL)
             self.beamlineList.insertItem(i, currentName)
-
-        # self.remote_schemes = []
-        # items = [previewmodel.PreviewItem(name=title, path=path)
-        #          for title, path in self.recent_schemes]
-        # model = previewmodel.PreviewModel(items=items)
-        #
-        # dialog = previewdialog.PreviewDialog(self)
-        # title = self.tr("Recent Workflows")
-        # dialog.setWindowTitle(title)
-        # template = ('<h3 style="font-size: 26px">\n'
-        #             #'<img height="26" src="canvas_icons:Recent.svg">\n'
-        #             '{0}\n'
-        #             '</h3>')
-        # dialog.setHeading(template.format(title))
-        # dialog.setModel(model)
-        #
-        # model.delayedScanUpdate()
-        #
-        # status = dialog.exec_()
-        #
-        # index = dialog.currentIndex()
-        #
-        # dialog.deleteLater()
-        # model.deleteLater()
-        #
-        # if status == QDialog.Accepted:
-        #     doc = self.current_document()
-        #     if doc.isModifiedStrict():
-        #         if self.ask_save_changes() == QDialog.Rejected:
-        #             return QDialog.Rejected
-        #
-        #     selected = model.item(index)
-        #
-        #     return self.load_scheme(six.text_type(selected.path()))
-
-        # return status
-
-        # left_box_1 = oasysgui.widgetBox(self.controlArea, "Shadow File Selection", addSpace=True, orientation="vertical",
-        #                                  width=570, height=70)
-        #
-        # figure_box = oasysgui.widgetBox(left_box_1, "", addSpace=True, orientation="horizontal", width=550, height=35)
-        #
-        # self.le_beam_file_name = oasysgui.lineEdit(figure_box, self, "beam_file_name", "Shadow File Name",
-        #                                             labelWidth=120, valueType=str, orientation="horizontal")
-        # self.le_beam_file_name.setFixedWidth(330)
-        #
-        # gui.button(figure_box, self, "...", callback=self.selectFile)
-        #
-        # #gui.separator(left_box_1, height=20)
-        #
-        # button = gui.button(self.controlArea, self, "Read Shadow File", callback=self.read_file)
-        # button.setFixedHeight(45)
-        #
-        # gui.rubber(self.controlArea)
-
-    def selectFile(self):
-        self.le_beam_file_name.setText(oasysgui.selectFileFromDialog(self, self.beam_file_name, "Open Shadow File"))
-
-    def read_file(self):
-        self.setStatusMessage("")
-
-        try:
-            if congruence.checkFileName(self.beam_file_name):
-                beam = loadShadowOpenPMD(filename=self.beam_file_name)
-                beam_out = ShadowBeam(beam=beam)
-
-                beam_out.history.append(ShadowOEHistoryItem()) # fake Source
-                beam_out._oe_number = 0
-
-                # just to create a safe history for possible re-tracing
-                beam_out.traceFromOE(beam_out, self.create_dummy_oe(), history=True)
-
-                path, file_name = os.path.split(self.beam_file_name)
-
-                self.setStatusMessage("Current: " + file_name)
-
-                self.send("Beam", beam_out)
-        except Exception as exception:
-            QtWidgets.QMessageBox.critical(self, "Error",
-                                       str(exception), QtWidgets.QMessageBox.Ok)
 
     # Code for opening remote OWS (from welcome dialogue)
 
@@ -209,49 +123,8 @@ class RemoteBeamlineLoader(oasyswidget.OWWidget):
         # ok = dlg.exec_()
         # url = dlg.textValue()
         #
-        return self.load_scheme(self.selectedURL)
 
-    # Code for opening recent OWS (from welcome dialogue)
-
-    def recent_scheme(self, *args):
-        """Browse recent schemes. Return QDialog.Rejected if the user
-        canceled the operation and QDialog.Accepted otherwise.
-
-        """
-        items = [previewmodel.PreviewItem(name=title, path=path)
-                 for title, path in self.recent_schemes]
-        model = previewmodel.PreviewModel(items=items)
-
-        dialog = previewdialog.PreviewDialog(self)
-        title = self.tr("Recent Workflows")
-        dialog.setWindowTitle(title)
-        template = ('<h3 style="font-size: 26px">\n'
-                    #'<img height="26" src="canvas_icons:Recent.svg">\n'
-                    '{0}\n'
-                    '</h3>')
-        dialog.setHeading(template.format(title))
-        dialog.setModel(model)
-
-        model.delayedScanUpdate()
-
-        status = dialog.exec_()
-
-        index = dialog.currentIndex()
-
-        dialog.deleteLater()
-        model.deleteLater()
-
-        if status == QDialog.Accepted:
-            doc = self.current_document()
-            if doc.isModifiedStrict():
-                if self.ask_save_changes() == QDialog.Rejected:
-                    return QDialog.Rejected
-
-            selected = model.item(index)
-
-            return self.load_scheme(six.text_type(selected.path()))
-
-        return status
+        return CanvasMainWindow.load_scheme(CanvasMainWindow, filename=str(self.selectedURL))
 
 
 if __name__ == "__main__":
