@@ -42,7 +42,9 @@ INSTALL_REQUIRES = (
     'setuptools',
     'openpmd-api',
     'jsonschema',
-    'urllib3'
+    'urllib3',
+    'jsonlib',
+    'requests'
 )
 
 PACKAGES = find_packages(exclude=('*.tests', '*.tests.*', 'tests.*', 'tests'))
