@@ -1,7 +1,8 @@
 import os, numpy
 
+from PyQt5.QtGui import QPalette, QColor
 from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtWidgets import QDialog, QInputDialog, QListWidget
+from PyQt5.QtWidgets import QFileDialog, QMessageBox
 from orangewidget import gui,widget
 from orangewidget.settings import Setting
 from oasys.widgets import gui as oasysgui, congruence
@@ -9,9 +10,8 @@ from oasys.widgets import widget as oasyswidget
 
 import json
 import urllib.request
-
-from orangecanvas.application.canvasmain import CanvasMainWindow
-from orangecanvas.preview import previewdialog, previewmodel
+from os.path import expanduser
+import requests
 
 # import six
 
@@ -26,11 +26,11 @@ class RemoteBeamlineLoader(oasyswidget.OWWidget):
     keywords = ["remote", "repository", "load", "read", "beamline"]
 
     want_main_area = 0
-
     beam_file_name = Setting("")
     selectedIndex = Setting([0])
     selectedURL = Setting("")
     repository = Setting("https://raw.githubusercontent.com/PaNOSC-ViNYL/Oasys-PaNOSC-Workspaces/master/mainList.json")
+    directory = Setting(expanduser("~"))
 
     def __init__(self):
         super().__init__()
@@ -54,16 +54,16 @@ class RemoteBeamlineLoader(oasyswidget.OWWidget):
         self.le_repoName = oasysgui.lineEdit(main_box, self, "repository", "Repository JSON URL: ", labelWidth=150,
                                              valueType=str, orientation="vertical", callbackOnType=self.changeRepoURL)
 
-        upper_box = oasysgui.widgetBox(main_box, "", orientation="horizontal", width=wWidth-20, height=wHeight-80)
+        upper_box = oasysgui.widgetBox(main_box, "", orientation="horizontal", width=wWidth-20, height=wHeight-105)
 
         left_box = oasysgui.widgetBox(upper_box, "List of workspaces", orientation="vertical",
-                                        width=wWidth/2.-13., height=wHeight-120)
+                                        width=wWidth/2.-13., height=wHeight-143)
 
         self.beamlineList = gui.listBox(left_box, self, "selectedIndex", callback=self.selectedItemListBox)
 
         right_box = oasysgui.widgetBox(upper_box, "Metadata", addSpace=True,
                                         orientation="vertical",
-                                        width=wWidth/2.-12., height=wHeight-120)
+                                        width=wWidth/2.-12., height=wHeight-143)
 
         self.metadataLabel = ""
         self.md_label = "%(metadataLabel)s"
@@ -71,15 +71,31 @@ class RemoteBeamlineLoader(oasyswidget.OWWidget):
 
         gui.separator(main_box, height=10)
 
-        button = gui.button(main_box, self, "Select and open...", callback=self.open_selected_scheme)
-        button.setFixedHeight(38)
+
+        down_box = oasysgui.widgetBox(main_box, "", orientation="horizontal", width=wWidth-20)
+        self.save_button = gui.button(down_box, self, "Save to...", callback=self.selectDirectoryFromDialog)
+        le_saveButton = oasysgui.lineEdit(down_box, self, "directory", "", valueType=str)
+        le_saveButton.setReadOnly(True)
+        palette = QPalette(le_saveButton.palette())
+        palette.setColor(QPalette.Text, QColor('dark grey'))
+        palette.setColor(QPalette.Base, QColor('light grey'))
+        le_saveButton.setPalette(palette)
+
+        button = gui.button(main_box, self, "Download...", callback=self.download_scheme)
+        button.setFixedHeight(35)
 
         gui.rubber(self.controlArea)
 
         self.changeRepoURL()
 
-    def changeRepoURL(self):
+    def selectDirectoryFromDialog(self, previous_directory_path="", message="Select Directory", start_directory="."):
+        directory_path = QFileDialog.getExistingDirectory(self, message, start_directory)
+        if not directory_path is None and not directory_path.strip() == "":
+            self.directory = directory_path
+        else:
+            self.directory = previous_directory_path
 
+    def changeRepoURL(self):
         response = urllib.request.urlopen(self.repository)
         beamlineJson = json.loads(response.read())
 
@@ -104,28 +120,29 @@ class RemoteBeamlineLoader(oasyswidget.OWWidget):
         self.selectedURL = self.urlsOfBeamlines[self.selectedIndex[0]]
         self.metadataLabel = self.metadataList[self.selectedIndex[0]]
 
-    def open_selected_scheme(self):
+    def download_scheme(self):
         """Open a new scheme. Return QDialog.Rejected if the user canceled
         the operation and QDialog.Accepted otherwise.
 
         """
-        # document = self.current_document()
-        # if document.isModifiedStrict():
-        #     if self.ask_save_changes() == QDialog.Rejected:
-        #         return QDialog.Rejected
-        #
-        # dlg = QInputDialog(self)
-        # dlg.setInputMode(QInputDialog.TextInput)
-        # dlg.setWindowTitle(self.tr("Open Remote Orange Workflow File"))
-        # dlg.setLabelText("URL:")
-        # dlg.setTextValue(self.tr("http://"))
-        # dlg.resize(500, 50)
-        # ok = dlg.exec_()
-        # url = dlg.textValue()
-        #
 
-        return CanvasMainWindow.load_scheme(CanvasMainWindow, filename=str(self.selectedURL))
+        try:
+            params = {'stream': True}
+            response = requests.get(self.selectedURL, params=params)
 
+            local_filename = self.selectedURL.split('/')[-1]
+
+            if response.status_code == 200:
+                with open(local_filename, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=1024):
+                        if chunk:
+                            f.write(chunk)
+            QMessageBox.information(self, "Success", "File saved: " + local_filename, QMessageBox.Ok)
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e), QMessageBox.Ok)
+
+            self.setStatusMessage("Error")
 
 if __name__ == "__main__":
     import sys

@@ -6,7 +6,7 @@ except AttributeError:
     from setuptools import find_packages, setup
 
 NAME = 'OASYS1-PaNOSC'
-VERSION = '0.0.5'
+VERSION = '0.1.0'
 ISRELEASED = True
 
 DESCRIPTION = 'OASYS extension for PaNOSC'
@@ -43,6 +43,8 @@ INSTALL_REQUIRES = (
     'openpmd-api',
     'jsonschema',
     'urllib3',
+    'json',
+    'requests'
 )
 
 PACKAGES = find_packages(exclude=('*.tests', '*.tests.*', 'tests.*', 'tests'))
@@ -69,7 +71,7 @@ ENTRY_POINTS = {
 
 if __name__ == '__main__':
     try:
-        import PyMca5, PyQt4
+        import PyMca5, PyQt5
 
         raise NotImplementedError("This version of PaNOSC Oasys Extensions doesn't work with Oasys1 beta.\nPlease install OASYS1 final release: http://www.elettra.eu/oasys.html")
     except:
