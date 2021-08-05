@@ -43,7 +43,6 @@ INSTALL_REQUIRES = (
     'openpmd-api',
     'jsonschema',
     'urllib3',
-    'jsonlib',
     'requests'
 )
 
