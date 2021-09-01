@@ -16,8 +16,8 @@ import requests
 # import six
 
 class RemoteBeamlineLoader(oasyswidget.OWWidget):
-    name = "Remote Repository Beamline Loader"
-    description = "Utility: Remote Repository Beamline Loader"
+    name = "Remote Repository Beamline Downloader"
+    description = "Utility: Remote Repository Beamline Downloader"
     icon = "icons/remote_beamline_open.png"
     maintainer = "Aljosa Hafner"
     maintainer_email = "aljosa.hafner(@at@)ceric-eric.eu"
