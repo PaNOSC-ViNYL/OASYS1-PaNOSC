@@ -40,7 +40,7 @@ SETUP_REQUIRES = (
 
 INSTALL_REQUIRES = (
     'setuptools',
-    'openpmd-api',
+    'openpmd-api~=0.13.0,~=0.14.0',
     'jsonschema',
     'urllib3',
     'requests'
