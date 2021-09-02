@@ -6,7 +6,7 @@ except AttributeError:
     from setuptools import find_packages, setup
 
 NAME = 'OASYS1-PaNOSC'
-VERSION = '0.1.0'
+VERSION = '0.1.1'
 ISRELEASED = True
 
 DESCRIPTION = 'OASYS extension for PaNOSC'
@@ -40,7 +40,7 @@ SETUP_REQUIRES = (
 
 INSTALL_REQUIRES = (
     'setuptools',
-    'openpmd-api~=0.13.0,~=0.14.0',
+    'openpmd-api~=0.14.0',
     'jsonschema',
     'urllib3',
     'requests'
