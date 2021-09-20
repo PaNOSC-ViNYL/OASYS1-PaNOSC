@@ -92,8 +92,10 @@ class RemoteBeamlineLoader(oasyswidget.OWWidget):
         directory_path = QFileDialog.getExistingDirectory(self, message, start_directory)
         if not directory_path is None and not directory_path.strip() == "":
             self.directory = directory_path
+            os.chdir(directory_path)
         else:
             self.directory = previous_directory_path
+            os.chdir(previous_directory_path)
 
     def changeRepoURL(self):
         response = urllib.request.urlopen(self.repository)
