@@ -43,7 +43,8 @@ INSTALL_REQUIRES = (
     'openpmd-api~=0.14.0',
     'jsonschema',
     'urllib3',
-    'requests'
+    'requests',
+    'shadow3libpyvinyl'
 )
 
 PACKAGES = find_packages(exclude=('*.tests', '*.tests.*', 'tests.*', 'tests'))
