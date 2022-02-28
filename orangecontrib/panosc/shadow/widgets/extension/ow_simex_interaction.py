@@ -174,7 +174,7 @@ if __name__ == "__main__":
     from PyQt5.QtWidgets import QApplication
 
     a = QApplication(sys.argv)
-    ow = RemoteBeamlineLoader()
+    ow = CalculateWithSimEx()
     # ow.le_beam_file_name.setText("/users/srio/Oasys/tmp.h5")
     # ow.workspace_units_to_cm = 100
     ow.show()
