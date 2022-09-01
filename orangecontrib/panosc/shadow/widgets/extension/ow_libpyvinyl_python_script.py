@@ -272,6 +272,9 @@ def make_python_script_from_list(list_optical_elements1, script_file="",):
 # Python script to run shadow3 using libpyvinyl.
 #
 from shadow3libpyvinyl.Shadow3Calculator import Shadow3Calculator
+from libpyvinyl.Parameters.Collections import CalculatorParameters
+from libpyvinyl.Parameters.Parameter import Parameter
+from shadow3libpyvinyl.Shadow3Data import Shadow3BeamFormat, Shadow3OpenPMDFormat
 
 
 """
@@ -283,7 +286,7 @@ from shadow3libpyvinyl.Shadow3Calculator import Shadow3Calculator
 
 
     template_define_source = """
-def add_source(calculator):
+def add_source(parameters):
     #
     # Define variables. See https://raw.githubusercontent.com/oasys-kit/shadow3/master/docs/source.nml
     #
@@ -314,23 +317,23 @@ def add_source(calculator):
             if isinstance(ivar[1], numpy.ndarray):
 
                 if not ((ivar[1] == ivarB[1]).all()):
-                    line = "    calculator.parameters['oe" + str(ioe) + "." + ivar[0] + "'] = numpy.array(" + str(ivarB[1].tolist()) + ")\n"
+                    line = "    p = Parameter('oe" + str(ioe) + "." + ivar[0] + "',''); p.value = numpy.array(" + str(ivarB[1].tolist()) + ") ; parameters.add(p)\n"
                     template_define_source += line
 
             else:
                 if ivar[1] != ivarB[1]:
                     if isinstance(ivar[1], (str, bytes)):
-                        line = "    calculator.parameters['oe" + str(ioe) + "." + ivar[0] + "'] = " + str(ivarB[1]).strip() + "\n"
+                        line = "    p = Parameter('oe" + str(ioe) + "." + ivar[0] + "',''); p.value = " + str(ivarB[1]).strip() + " ; parameters.add(p)\n"
                         if "SPECIFIED" in line:
                             pass
                         else:
                             template_define_source += line
                     else:
-                        line = "    calculator.parameters['oe" + str(ioe) + "." + ivar[0] + "'] = " + str(ivarB[1]) + "\n"
+                        line = "    p = Parameter('oe" + str(ioe) + "." + ivar[0] + "',''); p.value = " + str(ivarB[1]) + " ; parameters.add(p)\n"
                         template_define_source += line
 
     template_define_source += """
-    return calculator
+    return parameters
     """
 
 
@@ -340,7 +343,7 @@ def add_source(calculator):
 
     template_define_beamline = """
 
-def add_beamline(calculator):
+def add_beamline(parameters):
 
     """
 
@@ -362,10 +365,10 @@ def add_beamline(calculator):
         if ioe != 0:
 
             if isinstance(oe1B, Shadow.IdealLensOE):
-                template_define_beamline += "   calculator.parameters['oe" + str(ioe) + ".T_SOURCE']  = " + str(oe1B.T_SOURCE).strip() + "\n"
-                template_define_beamline += "   calculator.parameters['oe" + str(ioe) + ".T_IMAGE'] = " + str(oe1B.T_IMAGE).strip() + "\n"
-                template_define_beamline += "   calculator.parameters['oe" + str(ioe) + ".focal_x'] = " + str(oe1B.focal_x).strip() + "\n"
-                template_define_beamline += "   calculator.parameters['oe" + str(ioe) + ".focal_z'] = " + str(oe1B.focal_z).strip() + "\n"
+                template_define_beamline += "   p = Parameter('oe" + str(ioe) + ".T_SOURCE', '') ; p.value = " + str(oe1B.T_SOURCE).strip() + " ; parameters.add(p)\n"
+                template_define_beamline += "   p = Parameter('oe" + str(ioe) + ".T_IMAGE' , '') ; p.value = " + str(oe1B.T_IMAGE).strip() +  " ; parameters.add(p)\n"
+                template_define_beamline += "   p = Parameter('oe" + str(ioe) + ".focal_x' , '') ; p.value = " + str(oe1B.focal_x).strip() +  " ; parameters.add(p)\n"
+                template_define_beamline += "   p = Parameter('oe" + str(ioe) + ".focal_z' , '') ; p.value = " + str(oe1B.focal_z).strip() +  " ; parameters.add(p)\n"
             else:
                 memB = inspect.getmembers(oe1B)
                 mem = inspect.getmembers(oe1)
@@ -383,21 +386,21 @@ def add_beamline(calculator):
                         else:
                             if ivar[1] != ivarB[1]:
                                 if isinstance(ivar[1], (str, bytes)):
-                                    line = "    calculator.parameters['oe" + str(ioe) + "." + ivar[0] + "'] = " + str(ivarB[1]).strip() + "\n"
+                                    line = "    p = Parameter('oe" + str(ioe) + "." + ivar[0] + "','') ; p.value = " + str(ivarB[1]).strip() + " ; parameters.add(p)\n"
 
                                     if "SPECIFIED" in line:
                                         pass
                                     else:
                                         template_define_beamline += line
                                 else:
-                                    line = "    calculator.parameters['oe" + str(ioe) + "." + ivar[0] + "'] = " + str(ivarB[1]) + "\n"
+                                    line = "    p = Parameter('oe" + str(ioe) + "." + ivar[0] + "','') ; p.value = " + str(ivarB[1]) + " ; parameters.add(p)\n"
                                     template_define_beamline += line
 
 
 
     template_define_beamline += """\n
 
-    return calculator
+    return parameters
 
     """
 
@@ -423,36 +426,41 @@ def add_beamline(calculator):
 # main
 #
 
-
-calculator  = Shadow3Calculator("")
+parameters = CalculatorParameters()
 """
 
-    template += "calculator.setParams(number_of_optical_elements=%d)\n" % (n_elements - 1)
-    template += "calculator = add_source(calculator)"
+    # template += "calculator.setParams(number_of_optical_elements=%d)\n" % (n_elements - 1)
+    template += "parameters = add_source(parameters)"
 
 
     if n_elements > 1:
         template += """
-calculator = add_beamline(calculator)
+parameters = add_beamline(parameters)
 """
 
     template += """
-calculator.backengine(write_start_files_root="start")
+calculator  = Shadow3Calculator("", None, parameters=parameters)
+calculator.backengine()
 
 
 #
 # output files 
 #
-calculator.saveH5("tmp.h5")
 calculator.parameters.to_json("my_parameters.json")
 # print(calculator.parameters)
+
+# calculator.data.write("tmp.dat", Shadow3BeamFormat)    # raw data format
+calculator.data.write("tmp.h5", Shadow3OpenPMDFormat)  # openPMD data format
+
     
     
 #
 # plots
 #
 import Shadow
-Shadow.ShadowTools.plotxy(calculator.data,1,3,nbins=101,nolost=1,title="Real space")
+beam = Shadow.Beam(N=calculator.data.get_data()["nrays"])
+beam.rays = calculator.data.get_data()["rays"]
+Shadow.ShadowTools.plotxy(beam, 1, 3, nbins=101, nolost=1, title="Real space")
 
 """
 
@@ -470,7 +478,9 @@ if __name__ == "__main__":
     import Shadow
 
     class MyBeam():
-        pass
+        def getOEHistory(selfself):
+            return []
+        # pass
     beam_to_analize = Shadow.Beam()
     beam_to_analize.load("/users/srio/Oasys/star.01")
     my_beam = MyBeam()
