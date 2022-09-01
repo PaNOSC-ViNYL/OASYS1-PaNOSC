@@ -271,9 +271,10 @@ def make_python_script_from_list(list_optical_elements1, script_file="",):
     template_import = """#
 # Python script to run shadow3 using libpyvinyl.
 #
-from shadow3libpyvinyl.Shadow3Calculator import Shadow3Calculator
+import numpy
 from libpyvinyl.Parameters.Collections import CalculatorParameters
 from libpyvinyl.Parameters.Parameter import Parameter
+from shadow3libpyvinyl.Shadow3Calculator import Shadow3Calculator
 from shadow3libpyvinyl.Shadow3Data import Shadow3BeamFormat, Shadow3OpenPMDFormat
 
 
@@ -379,8 +380,8 @@ def add_beamline(parameters):
                         if isinstance(ivar[1], numpy.ndarray):
 
                             if not ((ivar[1] == ivarB[1]).all()):
-                                line = "    oe" + str(ioe) + "." + ivar[0] + " = numpy.array(" + str(
-                                    ivarB[1].tolist()) + ")\n"
+                                line = "    p = Parameter('oe" + str(ioe) + "." + ivar[0] + "','') ; p.value = numpy.array(" + str(
+                                    ivarB[1].tolist()) + ") ; parameters.add(p)\n"
                                 template_define_beamline += line
 
                         else:
