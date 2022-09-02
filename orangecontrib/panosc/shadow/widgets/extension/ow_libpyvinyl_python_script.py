@@ -323,8 +323,14 @@ def add_source(parameters):
 
             else:
                 if ivar[1] != ivarB[1]:
-                    if isinstance(ivar[1], (str, bytes)):
+                    if isinstance(ivar[1], (str)):
                         line = "    p = Parameter('oe" + str(ioe) + "." + ivar[0] + "',''); p.value = " + str(ivarB[1]).strip() + " ; parameters.add(p)\n"
+                        if "SPECIFIED" in line:
+                            pass
+                        else:
+                            template_define_source += line
+                    elif isinstance(ivar[1], (bytes)):
+                        line = "    p = Parameter('oe" + str(ioe) + "." + ivar[0] + "',''); p.value = '" + ivarB[1].strip().decode("utf-8") + "' ; parameters.add(p)\n"
                         if "SPECIFIED" in line:
                             pass
                         else:
@@ -386,8 +392,15 @@ def add_beamline(parameters):
 
                         else:
                             if ivar[1] != ivarB[1]:
-                                if isinstance(ivar[1], (str, bytes)):
+                                if isinstance(ivar[1], (str)):
                                     line = "    p = Parameter('oe" + str(ioe) + "." + ivar[0] + "','') ; p.value = " + str(ivarB[1]).strip() + " ; parameters.add(p)\n"
+
+                                    if "SPECIFIED" in line:
+                                        pass
+                                    else:
+                                        template_define_beamline += line
+                                elif isinstance(ivar[1], (bytes)):
+                                    line = "    p = Parameter('oe" + str(ioe) + "." + ivar[0] + "','') ; p.value = '" + ivarB[1].strip().decode("utf-8") + "' ; parameters.add(p)\n"
 
                                     if "SPECIFIED" in line:
                                         pass

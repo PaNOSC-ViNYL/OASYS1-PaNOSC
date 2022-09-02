@@ -6,7 +6,7 @@ except AttributeError:
     from setuptools import find_packages, setup
 
 NAME = 'OASYS1-PaNOSC'
-VERSION = '0.2.3'
+VERSION = '0.2.4'
 ISRELEASED = True
 
 DESCRIPTION = 'OASYS extension for PaNOSC'
@@ -44,7 +44,7 @@ INSTALL_REQUIRES = (
     'jsonschema',
     'urllib3',
     'requests',
-    'shadow3libpyvinyl'
+    'shadow3libpyvinyl>=1.0.4'
 )
 
 PACKAGES = find_packages(exclude=('*.tests', '*.tests.*', 'tests.*', 'tests'))
