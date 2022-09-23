@@ -1,4 +1,4 @@
-import os, numpy
+import os
 
 from PyQt5 import QtGui, QtWidgets
 from orangewidget import gui,widget
@@ -8,8 +8,7 @@ from oasys.widgets import widget as oasyswidget
 
 from orangecontrib.shadow.util.shadow_objects import ShadowBeam, ShadowOpticalElement, ShadowOEHistoryItem
 
-from orangecontrib.panosc.shadow.util.openPMD import loadShadowOpenPMD
-import Shadow
+from shadow3libpyvinyl.openPMD import loadShadowOpenPMD
 
 class BeamOpenPMDFileReader(oasyswidget.OWWidget):
     name = "Shadow openPMD-File Reader"

@@ -10,7 +10,7 @@ from oasys.widgets.widget import OWWidget
 from orangecontrib.shadow.util.shadow_objects import ShadowBeam
 from orangecontrib.shadow.util.shadow_util import ShadowCongruence
 
-from orangecontrib.panosc.shadow.util.openPMD import saveShadowToHDF
+from shadow3libpyvinyl.openPMD import saveShadowToHDF
 
 class BeamOpenPMDFileWriter(OWWidget):
     name = "Shadow openPMD-File Writer"

@@ -21,7 +21,7 @@ class RemoteBeamlineLoader(oasyswidget.OWWidget):
     icon = "icons/remote_beamline_open.png"
     maintainer = "Aljosa Hafner"
     maintainer_email = "aljosa.hafner(@at@)ceric-eric.eu"
-    priority = 2
+    priority = 12
     category = "Utility"
     keywords = ["remote", "repository", "load", "read", "beamline"]
 

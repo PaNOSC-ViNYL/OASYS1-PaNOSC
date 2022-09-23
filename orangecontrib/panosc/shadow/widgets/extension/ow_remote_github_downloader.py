@@ -1,4 +1,4 @@
-import os, numpy
+import os
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtGui import QPalette, QColor
 from PyQt5 import QtGui, QtWidgets
@@ -8,16 +8,12 @@ from orangewidget.settings import Setting
 from oasys.widgets import gui as oasysgui, congruence
 from oasys.widgets import widget as oasyswidget
 
-import json
 import urllib.request
 from urllib.request import urlretrieve
-from os.path import expanduser
-import requests
 
 from PyQt5.QtCore import QRect
 
 import re
-# import six
 
 from oasys.canvas.mainwindow import OASYSMainWindow
 
@@ -112,7 +108,7 @@ class RemoteGithubDownloader(oasyswidget.OWWidget):
     icon = "icons/github.png"
     maintainer = "Aljosa Hafner and Manuel Sanchez del Rio"
     maintainer_email = "aljosa.hafner(@at@)ceric-eric.eu"
-    priority = 3
+    priority = 13
     category = "Utility"
     keywords = ["remote", "repository", "load", "read", "beamline"]
 
@@ -178,7 +174,6 @@ class RemoteGithubDownloader(oasyswidget.OWWidget):
         self.md_label = "%(metadataLabel)s"
         self.box_metaData = gui.label(right_box, self, self.md_label, orientation="vertical")
 
-        # gui.separator(main_box, height=10)
 
         box3 = gui.widgetBox(main_box, orientation="vertical")
 
@@ -228,6 +223,7 @@ class RemoteGithubDownloader(oasyswidget.OWWidget):
     def clearRepoURL(self):
         self.beamlineList.clear()
         self.selectedIndex = [0]
+        self.urlselectedfile = ""
 
 
     def selectedItemListBox(self):
@@ -241,7 +237,6 @@ class RemoteGithubDownloader(oasyswidget.OWWidget):
 
     def open_scheme(self):
         canvas_window = OASYSMainWindow(parent=self, no_update=True)
-        # canvas_window.new_scheme_from(self.urlselectedfile)
         canvas_window.new_scheme()
 
     def download_scheme(self):
@@ -293,11 +288,6 @@ if __name__ == "__main__":
     #     beamlines, url_files, titles, descriptions = get_ows_data(server)
 
     import sys
-
-
-
-
-
     a = QApplication(sys.argv)
     ow = RemoteGithubDownloader()
     # ow.le_beam_file_name.setText("/users/srio/Oasys/tmp.h5")

@@ -1,5 +1,4 @@
-import os, sys
-
+import sys
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtGui import QPalette, QColor, QFont
 from PyQt5.QtWidgets import QApplication, QFileDialog
@@ -17,10 +16,6 @@ from PyQt5.QtCore import QRect
 
 import inspect
 import numpy
-import Shadow
-
-
-
 
 class ShadowLibpyvinylPythonScript(widget.OWWidget):
 
@@ -488,13 +483,13 @@ Shadow.ShadowTools.plotxy(beam, 1, 3, nbins=101, nolost=1, title="Real space")
 
 
 if __name__ == "__main__":
-    import sys
     import Shadow
 
     class MyBeam():
         def getOEHistory(selfself):
             return []
         # pass
+
     beam_to_analize = Shadow.Beam()
     beam_to_analize.load("/users/srio/Oasys/star.01")
     my_beam = MyBeam()
