@@ -1,38 +1,42 @@
-import os, numpy
+import os
 
-from PyQt5.QtGui import QPalette, QColor
+from PyQt5 import QtWidgets
 from PyQt5.QtCore import QSettings
 from orangecontrib.shadow.util.shadow_objects import ShadowBeam
 from orangecontrib.panosc.shadow.util.openPMD import saveShadowToHDF
 
-from PyQt5.QtWidgets import QFileDialog, QMessageBox
 from orangewidget import gui,widget
 from orangewidget.settings import Setting
 from oasys.widgets import gui as oasysgui, congruence
 from oasys.widgets import widget as oasyswidget
 
-import json
-import urllib.request
-from os.path import expanduser
-import requests
+from orangecontrib.shadow.util.shadow_util import ShadowCongruence
+
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+from matplotlib import cm
+
+import warnings
 
 # import six
 
 class CalculateWithSimEx(oasyswidget.OWWidget):
     name = "Run SimEx Calculation"
     description = "Utility: Seamless interaction with SimEx calculators"
-    icon = "icons/remote_beamline_open.png"
+    icon = "icons/python_script.png"
     maintainer = "Aljosa Hafner"
     maintainer_email = "aljosa.hafner(@at@)ceric-eric.eu"
-    priority = 2
+    priority = 10
     category = "Utility"
     keywords = ["simex", "sample", "simulation", "interaction", "seamless", "panosc"]
 
     want_main_area = 0
     beam_file_name = Setting("")
-    selectedIndex = Setting([0])
-    selectedURL = Setting("")
-    directory = Setting(expanduser("~"))
+    gapd_sample_file = Setting("single-cu.xyz")
+    gapd_output_file = Setting("diffr_poly_1.txt")
+    select_input = 0
+    select_calculator = 0
 
     is_automatic_run= Setting(1)
 
@@ -50,124 +54,247 @@ class CalculateWithSimEx(oasyswidget.OWWidget):
 
     input_beam = None
 
-    outputs = [{"name": "Beam",
-                "type": ShadowBeam,
-                "doc": "Shadow Beam",
-                "id": "beam"}, ]
-
     def __init__(self):
         super().__init__()
 
-        """Browse recent schemes. Return QDialog.Rejected if the user
-        canceled the operation and QDialog.Accepted otherwise.
+        self.runaction = widget.OWAction("Write Shadow File", self)
+        self.runaction.triggered.connect(self.write_file)
+        self.addAction(self.runaction)
 
-        """
-
-        ## https://raw.githubusercontent.com/PaNOSC-ViNYL/Oasys-PaNOSC-Workspaces/master/mainList.json
-        # https://github.com/PaNOSC-ViNYL/Oasys-PaNOSC-Workspaces
-        #
         # self.setFixedWidth(590)
-        # self.setFixedHeight(300)
+        # self.setFixedHeight(190)
 
-        wWidth = 650
-        wHeight = 400
+        gui.checkBox(self.controlArea, self, 'is_automatic_run', 'Automatic Execution')
 
-        main_box = oasysgui.widgetBox(self.controlArea, "", orientation="vertical", width=wWidth-20, height=wHeight-20)
+        left_box_1 = oasysgui.widgetBox(self.controlArea, "Shadow Beam Input", addSpace=True, orientation="vertical", width=620, height=130)
 
-        self.le_repoName = oasysgui.lineEdit(main_box, self, "repository", "Repository JSON URL: ", labelWidth=150,
-                                             valueType=str, orientation="vertical", callbackOnType=self.changeRepoURL)
-
-        upper_box = oasysgui.widgetBox(main_box, "", orientation="horizontal", width=wWidth-20, height=wHeight-105)
-
-        left_box = oasysgui.widgetBox(upper_box, "List of workspaces", orientation="vertical",
-                                        width=wWidth/2.-13., height=wHeight-143)
-
-        self.beamlineList = gui.listBox(left_box, self, "selectedIndex", callback=self.selectedItemListBox)
-
-        right_box = oasysgui.widgetBox(upper_box, "Metadata", addSpace=True,
-                                        orientation="vertical",
-                                        width=wWidth/2.-12., height=wHeight-143)
-
-        self.metadataLabel = ""
-        self.md_label = "%(metadataLabel)s"
-        self.box_metaData = gui.label(right_box, self, self.md_label, orientation="vertical")
-
-        gui.separator(main_box, height=10)
+        gui.comboBox(left_box_1, self, "select_input", label="Select Input",
+                     items=["From Workspace", "From File"], labelWidth=240,
+                     callback=self.set_SelectInput, sendSelectedValue=False, orientation="horizontal")
 
 
-        down_box = oasysgui.widgetBox(main_box, "", orientation="horizontal", width=wWidth-20)
-        self.save_button = gui.button(down_box, self, "Save to...", callback=self.selectDirectoryFromDialog)
-        le_saveButton = oasysgui.lineEdit(down_box, self, "directory", "", valueType=str)
-        le_saveButton.setReadOnly(True)
-        palette = QPalette(le_saveButton.palette())
-        palette.setColor(QPalette.Text, QColor('dark grey'))
-        palette.setColor(QPalette.Base, QColor('light grey'))
-        le_saveButton.setPalette(palette)
+        self.use_SelectInput_OWS_empty = oasysgui.widgetBox(left_box_1, "", addSpace=False, addToLayout=False, width=0)
+        self.use_SelectInput_OWS = oasysgui.widgetBox(left_box_1, "", addSpace=False, orientation="vertical", width=600, height=65)
+        
+        self.use_SelectInput_OWS_box = oasysgui.widgetBox(self.use_SelectInput_OWS, "", addSpace=False, orientation="horizontal", width=600)
+        self.le_beam_file_name = oasysgui.lineEdit(self.use_SelectInput_OWS_box, self, "beam_file_name", "File Name", labelWidth=120, valueType=str, orientation="horizontal")
+        gui.button(self.use_SelectInput_OWS_box, self, "...", callback=self.selectFile)
+        
+        gui.button(self.use_SelectInput_OWS, self, "Write openPMD/hdf File", callback=self.write_file)
 
-        button = gui.button(main_box, self, "Download...", callback=self.download_scheme)
-        button.setFixedHeight(35)
+        self.use_SelectInput_File_empty = oasysgui.widgetBox(left_box_1, "", addSpace=False, addToLayout=False, width=0)
+        self.use_SelectInput_File = oasysgui.widgetBox(left_box_1, "", addSpace=False, orientation="horizontal", width=600, height=65)
+        self.le_beam_file_name = oasysgui.lineEdit(self.use_SelectInput_File, self, "beam_file_name", "Shadow File Name", labelWidth=120, valueType=str, orientation="horizontal")
+        gui.button(self.use_SelectInput_File, self, "...", callback=self.selectFile)
+
+        self.set_SelectInput()
+        # button.setFixedHeight(35)
+
+        left_box_2 = oasysgui.widgetBox(self.controlArea, "SimEx Calculator Parameters", addSpace=True, orientation="vertical", width=620)
+
+        gui.comboBox(left_box_2, self, "select_calculator", label="Select Calculator",
+                     items=["GAPD", "Another calculator"], labelWidth=240,
+                     callback=self.set_SelectCalculator, sendSelectedValue=False, orientation="horizontal")
+
+        self.use_SelectCalculator_GAPD_empty = oasysgui.widgetBox(left_box_2, "", addSpace=False, addToLayout=False, width=0)
+        self.use_SelectCalculator_GAPD = oasysgui.widgetBox(left_box_2, "", addSpace=False, orientation="vertical", width=600)
+
+        self.le_gapd_sample_box = oasysgui.widgetBox(self.use_SelectCalculator_GAPD, "", addSpace=False, orientation="horizontal", width=600)
+        self.le_gapd_sample = oasysgui.lineEdit(self.le_gapd_sample_box, self, "gapd_sample_file", "Sample File [xyz]", labelWidth=120, valueType=str, orientation="horizontal")
+        gui.button(self.le_gapd_sample_box, self, "...", callback=self.selectFileGAPDSample)
+
+        self.le_gapd_output_box = oasysgui.widgetBox(self.use_SelectCalculator_GAPD, "", addSpace=False, orientation="horizontal", width=600)
+        self.le_gapd_output = oasysgui.lineEdit(self.le_gapd_output_box, self, "gapd_output_file", "Output File", labelWidth=120, valueType=str, orientation="horizontal")
+        gui.button(self.le_gapd_output_box, self, "...", callback=self.selectFileGAPDOutput)
+
+        self.set_SelectCalculator()
+        
+        self.button_box_GAPD = oasysgui.widgetBox(self.use_SelectCalculator_GAPD, "", addSpace=False, orientation="horizontal", width=600)
+        button2 = gui.button(self.button_box_GAPD, self, "Calculate", callback=self.calculateSimEx)
+        button3 = gui.button(self.button_box_GAPD, self, "Plot Output File", callback=self.plotSimEx)
 
         gui.rubber(self.controlArea)
 
-        self.changeRepoURL()
+    def set_SelectInput(self):
+        self.use_SelectInput_File.setVisible(self.select_input == 1)
+        self.use_SelectInput_OWS.setVisible(self.select_input == 0)
+        self.use_SelectInput_File_empty.setVisible(self.select_input == 0)
+        self.use_SelectInput_OWS_empty.setVisible(self.select_input == 1)
 
-    def selectDirectoryFromDialog(self, previous_directory_path="", message="Select Directory", start_directory="."):
-        directory_path = QFileDialog.getExistingDirectory(self, message, start_directory)
-        if not directory_path is None and not directory_path.strip() == "":
-            self.directory = directory_path
-            os.chdir(directory_path)
+    def set_SelectCalculator(self):
+        self.use_SelectCalculator_GAPD.setVisible(self.select_calculator == 0)
+        self.use_SelectCalculator_GAPD_empty.setVisible(self.select_calculator == 1)
+
+    def selectFile(self):
+        self.le_beam_file_name.setText(oasysgui.selectFileFromDialog(self, self.beam_file_name, "Open Shadow File"))
+
+    def selectFileGAPDSample(self):
+        self.le_gapd_sample.setText(oasysgui.selectFileFromDialog(self, self.gapd_sample_file, "Select GAPD Sample File"))
+    def selectFileGAPDOutput(self):
+        self.le_gapd_output.setText(oasysgui.selectFileFromDialog(self, self.gapd_output_file, "Select GAPD Output File"))
+
+    def setBeam(self, beam):
+        send_footprint_beam = QSettings().value("output/send-footprint", 0, int) == 1
+
+        if send_footprint_beam and isinstance(beam, list):
+            self.input_beam = beam[1]
+        elif ShadowCongruence.checkEmptyBeam(beam) and ShadowCongruence.checkGoodBeam(beam):
+            self.input_beam = beam
         else:
-            self.directory = previous_directory_path
-            os.chdir(previous_directory_path)
+            QtWidgets.QMessageBox.critical(self, "Error", "No good rays or bad content", QtWidgets.QMessageBox.Ok)
+            return
 
-    def changeRepoURL(self):
-        response = urllib.request.urlopen(self.repository)
-        beamlineJson = json.loads(response.read())
+        if self.is_automatic_run: self.write_file_temp()
 
-        beamlines = beamlineJson['OASYS_Remote_Workspaces_PaNOSC']['beamlines']
-        namesOfBeamlines = []
-        self.metadataList = []
-        self.urlsOfBeamlines = []
+    def write_file(self):
+        self.setStatusMessage("")
+        print(">>>>> called write_file ")
+        try:
+            if ShadowCongruence.checkEmptyBeam(self.input_beam):
+                if ShadowCongruence.checkGoodBeam(self.input_beam):
+                    if congruence.checkFileName(self.beam_file_name):
+                        # self.input_beam.writeToFile(self.beam_file_name)
+                        saveShadowToHDF(self.input_beam._beam, filename=self.beam_file_name)
+                        print(">>>>> File %s written to disk" % self.beam_file_name)
 
+                        path, file_name = os.path.split(self.beam_file_name)
 
-        for i, beamline in enumerate(beamlines):
-            currentName = beamline['institute'] + ' - ' + beamline['name']
-            currentURL = beamline['url_workspace']
-            currentMetadata = "Institute: " + beamline['institute'] + "\n" + "Beamline: " + beamline['name'] + "\n" + "Creator: " + beamline['uploaded_by'] + "\n" + "Date: " + beamline['date'] + "\n" + "Other info: " + beamline['url_info']
-            namesOfBeamlines.append(currentName)
-            self.metadataList.append(currentMetadata)
-            self.urlsOfBeamlines.append(currentURL)
-            self.beamlineList.insertItem(i, currentName)
+                        self.setStatusMessage("File Out: " + file_name)
 
-    # Code for opening remote OWS (from welcome dialogue)
+                        self.send("Beam", self.input_beam)
+                else:
+                    QtWidgets.QMessageBox.critical(self, "Error", "No good rays or bad content", QtWidgets.QMessageBox.Ok)
+        except Exception as exception:
+            QtWidgets.QMessageBox.critical(self, "Error", str(exception), QtWidgets.QMessageBox.Ok)
 
-    def selectedItemListBox(self):
-        self.selectedURL = self.urlsOfBeamlines[self.selectedIndex[0]]
-        self.metadataLabel = self.metadataList[self.selectedIndex[0]]
+    def write_file_temp(self):
+        self.setStatusMessage("")
+        print(">>>>> called write_file_temp ")
+        try:
+            if ShadowCongruence.checkEmptyBeam(self.input_beam):
+                if ShadowCongruence.checkGoodBeam(self.input_beam):
+                    saveShadowToHDF(self.input_beam._beam, filename="temp.h5")
+                    print(">>>>> File %s written to disk" % "temp.h5")
 
-    def download_scheme(self):
-        """Open a new scheme. Return QDialog.Rejected if the user canceled
-        the operation and QDialog.Accepted otherwise.
+                    self.setStatusMessage("Temp file saved")
+                    
+                    self.send("Beam", self.input_beam)
+                else:
+                    QtWidgets.QMessageBox.critical(self, "Error", "No good rays or bad content", QtWidgets.QMessageBox.Ok)
+        except Exception as exception:
+            QtWidgets.QMessageBox.critical(self, "Error", str(exception), QtWidgets.QMessageBox.Ok)
+    
+    def plotSimEx(self):
+        try:
+            outfile = self.gapd_output_file
 
-        """
+            plt.figure('Spectrum')
+            spec = np.loadtxt('/home/aljosa/Oasys/development_sprint/py/spectrum.txt')
+            plt.plot(spec[:, 0], spec[:, 1])
+    
+            data = np.loadtxt(outfile, ndmin=2)
+            print(data.shape)
+            fig = plt.figure('Linear', figsize=(10, 5))
+            plt.imshow(data,
+                    vmax=0.5,
+                    cmap=cm.jet)
+            plt.colorbar()
+        
+            data = np.loadtxt(outfile, ndmin=2)
+            print(data.shape)
+            fig = plt.figure('Logarithmic', figsize=(10, 5), )
+            plt.imshow(data,
+                    cmap=cm.jet,
+                    norm=colors.LogNorm(vmin=data.min(), vmax=data.max())
+                    )
+            plt.colorbar()
+            plt.show()
+        except Exception as exception:
+            QtWidgets.QMessageBox.critical(self, "Error: Cannot Read File", str(exception), QtWidgets.QMessageBox.Ok)
+    
+    def calculateSimEx(self):
 
         try:
-            params = {'stream': True}
-            response = requests.get(self.selectedURL, params=params)
+            from SimEx.Calculators.GAPDPhotonDiffractor import GAPDPhotonDiffractor
+            from SimEx.Parameters.GAPDPhotonDiffractorParameters import GAPDPhotonDiffractorParameters
+            from SimEx.Parameters.DetectorGeometry import DetectorGeometry, DetectorPanel
+            from SimEx.Utilities.Units import meter, electronvolt, joule, radian
 
-            local_filename = self.selectedURL.split('/')[-1]
+        except:
+            warnings.warn("GAPD Not Installed!", Warning)
+            return None
 
-            if response.status_code == 200:
-                with open(local_filename, 'wb') as f:
-                    for chunk in response.iter_content(chunk_size=1024):
-                        if chunk:
-                            f.write(chunk)
-            QMessageBox.information(self, "Success", "File saved: " + local_filename, QMessageBox.Ok)
+        self.setStatusMessage("Preprocessing")
 
-        except Exception as e:
-            QMessageBox.critical(self, "Error", str(e), QMessageBox.Ok)
+        detector_panel = DetectorPanel(
+            ranges={
+                'fast_scan_min': 0,
+                'fast_scan_max': 200,
+                'slow_scan_min': 0,
+                'slow_scan_max': 200
+            },
+            pixel_size=2200e-6 * meter,
+            photon_response=1.0,
+            distance_from_interaction_plane=0.25 * meter,
+            corners={
+                'x': -100,
+                'y': -100
+            },
+        )
+        detector_geometry = DetectorGeometry(panels=[detector_panel])
+    
+        # Polychromatic beam setup
 
-            self.setStatusMessage("Error")
+        self.setStatusMessage("Setting input beam")
+
+        if self.select_input == 1:
+            beam = self.beam_file_name
+        else:
+            self.write_file_temp()
+            beam = "temp.h5"
+    
+        # Diffractor setup
+        outfile = self.gapd_output_file
+        if os.path.exists(outfile) == False:
+            open(outfile, "w").close
+
+        self.setStatusMessage("Setting Parameters")
+        parameters = GAPDPhotonDiffractorParameters(detector_geometry=detector_geometry, beam_parameters=beam, number_of_spectrum_bins=100)
+
+        self.setStatusMessage("Calculating")
+        diffractor = GAPDPhotonDiffractor(parameters=parameters,
+                                          input_path=self.gapd_sample_file,
+                                          output_path=outfile)
+    
+        diffractor.backengine()
+
+        self.setStatusMessage("Done!")
+
+        # Plot
+        self.plotSimEx()
+        #plt.figure('Spectrum')
+        #spec = np.loadtxt('/home/aljosa/Oasys/development_sprint/py/spectrum.txt')
+        #plt.plot(spec[:, 0], spec[:, 1])
+    
+        #data = np.loadtxt(outfile, ndmin=2)
+        #print(data.shape)
+        #fig = plt.figure('Linear', figsize=(10, 5))
+        #plt.imshow(data,
+                   #vmax=0.5,
+                   #cmap=cm.jet)
+        #plt.colorbar()
+    
+        #data = np.loadtxt(outfile, ndmin=2)
+        #print(data.shape)
+        #fig = plt.figure('Logarithmic', figsize=(10, 5), )
+        #plt.imshow(data,
+                   #cmap=cm.jet,
+                   #norm=colors.LogNorm(vmin=data.min(), vmax=data.max())
+                   #)
+        #plt.colorbar()
+        #plt.show()
+    
+        return None
 
 if __name__ == "__main__":
     import sys
@@ -175,9 +302,6 @@ if __name__ == "__main__":
 
     a = QApplication(sys.argv)
     ow = CalculateWithSimEx()
-    # ow.le_beam_file_name.setText("/users/srio/Oasys/tmp.h5")
-    # ow.workspace_units_to_cm = 100
     ow.show()
     a.exec_()
     ow.saveSettings()
-    # beam = loadShadowOpenPMD(filename="/users/srio/Oasys/tmp.h5")
