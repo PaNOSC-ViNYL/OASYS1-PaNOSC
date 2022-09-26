@@ -7,7 +7,7 @@ from orangewidget import gui
 from orangewidget.settings import Setting
 from oasys.widgets import gui as oasysgui
 
-from orangecontrib.esrf.shadow.util.python_script import PythonConsole
+from orangecontrib.panosc.shadow.util.python_script import PythonConsole
 
 from orangecontrib.shadow.util.shadow_objects import ShadowBeam
 from orangecontrib.shadow.util.shadow_util import ShadowCongruence, ShadowPlot
