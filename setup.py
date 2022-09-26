@@ -6,7 +6,7 @@ except AttributeError:
     from setuptools import find_packages, setup
 
 NAME = 'OASYS1-PaNOSC'
-VERSION = '0.2.6'
+VERSION = '0.2.7'
 ISRELEASED = True
 
 DESCRIPTION = 'OASYS extension for PaNOSC'

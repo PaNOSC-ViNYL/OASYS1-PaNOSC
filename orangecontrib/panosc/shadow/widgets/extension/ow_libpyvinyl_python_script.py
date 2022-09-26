@@ -16,6 +16,7 @@ from PyQt5.QtCore import QRect
 
 import inspect
 import numpy
+import Shadow
 
 class ShadowLibpyvinylPythonScript(widget.OWWidget):
 
