@@ -2,6 +2,10 @@ import os
 
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QSettings
+from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtGui import QPalette, QColor, QFont
+
+
 from orangecontrib.shadow.util.shadow_objects import ShadowBeam
 from orangecontrib.panosc.shadow.util.openPMD import saveShadowToHDF
 
@@ -57,6 +61,14 @@ class CalculateWithSimEx(oasyswidget.OWWidget):
     def __init__(self):
         super().__init__()
 
+        try:
+            from SimEx.Calculators.GAPDPhotonDiffractor import GAPDPhotonDiffractor
+            self.is_installed = True
+
+        except:
+            self.is_installed = False
+            QMessageBox.information(self, "Warning", "GAPD is NOT installed!", QMessageBox.Ok)
+
         self.runaction = widget.OWAction("Write Shadow File", self)
         self.runaction.triggered.connect(self.write_file)
         self.addAction(self.runaction)
@@ -65,6 +77,27 @@ class CalculateWithSimEx(oasyswidget.OWWidget):
         # self.setFixedHeight(190)
 
         gui.checkBox(self.controlArea, self, 'is_automatic_run', 'Automatic Execution')
+
+        is_installed_label = gui.label(self.controlArea, self, "GAPD is NOT installed!")
+        font = QFont(is_installed_label.font())
+        font.setBold(True)
+        is_installed_label.setFont(font)
+        is_installed_label.setStyleSheet('color: red')
+        # palette = QPalette(is_installed_label.palette())
+        # palette.setColor(QPalette.Text, QColor('red'))
+        # palette.setColor(QPalette.Base, QColor(243, 240, 140))
+        # is_installed_label.setPalette(palette)
+
+        if self.is_installed:
+            is_installed_label.setText("GAPD is installed")
+            font = QFont(is_installed_label.font())
+            font.setBold(True)
+            is_installed_label.setFont(font)
+            is_installed_label.setStyleSheet('color: green')
+            # palette = QPalette(is_installed_label.palette())
+            # palette.setColor(QPalette.Text, QColor('green'))
+            # palette.setColor(QPalette.Base, QColor(243, 240, 140))
+            # is_installed_label.setPalette(palette)
 
         left_box_1 = oasysgui.widgetBox(self.controlArea, "Shadow Beam Input", addSpace=True, orientation="vertical", width=620, height=130)
 
@@ -219,82 +252,84 @@ class CalculateWithSimEx(oasyswidget.OWWidget):
             from SimEx.Parameters.GAPDPhotonDiffractorParameters import GAPDPhotonDiffractorParameters
             from SimEx.Parameters.DetectorGeometry import DetectorGeometry, DetectorPanel
             from SimEx.Utilities.Units import meter, electronvolt, joule, radian
+            QMessageBox.information(self, "Import Successful", "GAPD was successfully imported!", QMessageBox.Ok)
 
-        except:
-            warnings.warn("GAPD Not Installed!", Warning)
+            self.setStatusMessage("Preprocessing")
+
+            detector_panel = DetectorPanel(
+                ranges={
+                    'fast_scan_min': 0,
+                    'fast_scan_max': 200,
+                    'slow_scan_min': 0,
+                    'slow_scan_max': 200
+                },
+                pixel_size=2200e-6 * meter,
+                photon_response=1.0,
+                distance_from_interaction_plane=0.25 * meter,
+                corners={
+                    'x': -100,
+                    'y': -100
+                },
+            )
+            detector_geometry = DetectorGeometry(panels=[detector_panel])
+
+            # Polychromatic beam setup
+
+            self.setStatusMessage("Setting input beam")
+
+            if self.select_input == 1:
+                beam = self.beam_file_name
+            else:
+                self.write_file_temp()
+                beam = "temp.h5"
+
+            # Diffractor setup
+            outfile = self.gapd_output_file
+            if os.path.exists(outfile) == False:
+                open(outfile, "w").close
+
+            self.setStatusMessage("Setting Parameters")
+            parameters = GAPDPhotonDiffractorParameters(detector_geometry=detector_geometry, beam_parameters=beam,
+                                                        number_of_spectrum_bins=100)
+
+            self.setStatusMessage("Calculating")
+            diffractor = GAPDPhotonDiffractor(parameters=parameters,
+                                              input_path=self.gapd_sample_file,
+                                              output_path=outfile)
+
+            diffractor.backengine()
+
+            self.setStatusMessage("Done!")
+
+            # Plot
+            self.plotSimEx()
+            # plt.figure('Spectrum')
+            # spec = np.loadtxt('/home/aljosa/Oasys/development_sprint/py/spectrum.txt')
+            # plt.plot(spec[:, 0], spec[:, 1])
+
+            # data = np.loadtxt(outfile, ndmin=2)
+            # print(data.shape)
+            # fig = plt.figure('Linear', figsize=(10, 5))
+            # plt.imshow(data,
+            # vmax=0.5,
+            # cmap=cm.jet)
+            # plt.colorbar()
+
+            # data = np.loadtxt(outfile, ndmin=2)
+            # print(data.shape)
+            # fig = plt.figure('Logarithmic', figsize=(10, 5), )
+            # plt.imshow(data,
+            # cmap=cm.jet,
+            # norm=colors.LogNorm(vmin=data.min(), vmax=data.max())
+            # )
+            # plt.colorbar()
+            # plt.show()
+
             return None
 
-        self.setStatusMessage("Preprocessing")
-
-        detector_panel = DetectorPanel(
-            ranges={
-                'fast_scan_min': 0,
-                'fast_scan_max': 200,
-                'slow_scan_min': 0,
-                'slow_scan_max': 200
-            },
-            pixel_size=2200e-6 * meter,
-            photon_response=1.0,
-            distance_from_interaction_plane=0.25 * meter,
-            corners={
-                'x': -100,
-                'y': -100
-            },
-        )
-        detector_geometry = DetectorGeometry(panels=[detector_panel])
-    
-        # Polychromatic beam setup
-
-        self.setStatusMessage("Setting input beam")
-
-        if self.select_input == 1:
-            beam = self.beam_file_name
-        else:
-            self.write_file_temp()
-            beam = "temp.h5"
-    
-        # Diffractor setup
-        outfile = self.gapd_output_file
-        if os.path.exists(outfile) == False:
-            open(outfile, "w").close
-
-        self.setStatusMessage("Setting Parameters")
-        parameters = GAPDPhotonDiffractorParameters(detector_geometry=detector_geometry, beam_parameters=beam, number_of_spectrum_bins=100)
-
-        self.setStatusMessage("Calculating")
-        diffractor = GAPDPhotonDiffractor(parameters=parameters,
-                                          input_path=self.gapd_sample_file,
-                                          output_path=outfile)
-    
-        diffractor.backengine()
-
-        self.setStatusMessage("Done!")
-
-        # Plot
-        self.plotSimEx()
-        #plt.figure('Spectrum')
-        #spec = np.loadtxt('/home/aljosa/Oasys/development_sprint/py/spectrum.txt')
-        #plt.plot(spec[:, 0], spec[:, 1])
-    
-        #data = np.loadtxt(outfile, ndmin=2)
-        #print(data.shape)
-        #fig = plt.figure('Linear', figsize=(10, 5))
-        #plt.imshow(data,
-                   #vmax=0.5,
-                   #cmap=cm.jet)
-        #plt.colorbar()
-    
-        #data = np.loadtxt(outfile, ndmin=2)
-        #print(data.shape)
-        #fig = plt.figure('Logarithmic', figsize=(10, 5), )
-        #plt.imshow(data,
-                   #cmap=cm.jet,
-                   #norm=colors.LogNorm(vmin=data.min(), vmax=data.max())
-                   #)
-        #plt.colorbar()
-        #plt.show()
-    
-        return None
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e), QMessageBox.Ok)
+            self.setStatusMessage("GAPD NOT installed!")
 
 if __name__ == "__main__":
     import sys
