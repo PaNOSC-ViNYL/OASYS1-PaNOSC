@@ -1,8 +1,8 @@
-import os
 from PyQt5.QtWidgets import QApplication
-from PyQt5.QtGui import QPalette, QColor
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtWidgets import QFileDialog, QMessageBox
+from PyQt5.QtCore import QRect
+
 from orangewidget import gui,widget
 from orangewidget.settings import Setting
 from oasys.widgets import gui as oasysgui, congruence
@@ -11,11 +11,7 @@ from oasys.widgets import widget as oasyswidget
 import urllib.request
 from urllib.request import urlretrieve
 
-from PyQt5.QtCore import QRect
-
 import re
-
-from oasys.canvas.mainwindow import OASYSMainWindow
 
 def get_usual_servers():
     urls = [
@@ -30,6 +26,9 @@ def get_usual_servers():
         "https://github.com/oasys-esrf-kit/OasysWorkspaces",
         "https://github.com/PaNOSC-ViNYL/Oasys-PaNOSC-Workspaces",
         "https://github.com/oasys-esrf-kit/paper-multioptics-resources/tree/main/workspaces",
+        "https://github.com/oasys-als-kit/Paper_JSR_yi5097/tree/master/Oasys",
+        "https://github.com/oasys-als-kit/Paper_JSR_hf5419",
+        "https://github.com/srio/paper-hierarchical-resources/tree/master/Oasys",
     ]
     names = [
         "",
@@ -43,6 +42,9 @@ def get_usual_servers():
         "ESRF Oasys repo",
         "PaNOSC Oasys repo",
         "Paper multioptics",
+        "Paper heat load compensation",
+        "Paper diaboloid",
+        "Paper hierarchical",
     ]
     return names, urls
 
@@ -77,10 +79,10 @@ def get_ows_data(url, debug=0):
     list_files = ls_ows(url)
     titles = []
     descriptions = []
-    url_files = []
+    url_files1 = []
     for file in list_files:
         url_file = url_raw + file
-        url_files.append(url_file)
+        url_files1.append(url_file)
         if debug: print(">>", url_file)
         try:
             data = urllib.request.urlopen(url_file).read(2000).decode('utf-8')
@@ -100,14 +102,14 @@ def get_ows_data(url, debug=0):
             titles. append("")
 
 
-    return list_files, url_files, titles, descriptions
+    return list_files, url_files1, titles, descriptions
 
 class RemoteGithubDownloader(oasyswidget.OWWidget):
     name = "Remote Github Repository Downloader"
     description = "Utility: Remote Github Repository Downloader"
     icon = "icons/github.png"
     maintainer = "Aljosa Hafner and Manuel Sanchez del Rio"
-    maintainer_email = "aljosa.hafner(@at@)ceric-eric.eu"
+    maintainer_email = "srio(@at@)esrf.eu"
     priority = 13
     category = "Utility"
     keywords = ["remote", "repository", "load", "read", "beamline"]
@@ -121,6 +123,12 @@ class RemoteGithubDownloader(oasyswidget.OWWidget):
     # repository = Setting("https://github.com/oasys-kit/ShadowOui-tutorial")
     repository = Setting("https://github.com/PaNOSC-ViNYL/Oasys-PaNOSC-Workspaces")
     urlselectedfile = Setting("")
+
+    beamlines = []    # workspace names
+    descriptions = [] # as stored in the workspace
+    url_files = []    # the raw url to open remote
+
+
 
     def __init__(self):
         super().__init__()
@@ -144,9 +152,6 @@ class RemoteGithubDownloader(oasyswidget.OWWidget):
         self.setMaximumHeight(self.geometry().height())
         self.setMaximumWidth(self.geometry().width())
 
-
-
-
         main_box = oasysgui.widgetBox(self.controlArea, "", orientation="vertical", width=wWidth-40, height=wHeight-30)
 
         gui.comboBox(main_box, self, "servers_list", label="Select a server",
@@ -155,7 +160,7 @@ class RemoteGithubDownloader(oasyswidget.OWWidget):
 
         box1 = gui.widgetBox(main_box, orientation="horizontal")
         self.le_repoName = oasysgui.lineEdit(box1, self, "repository", "Repository URL: ", labelWidth=120,
-                                             valueType=str, orientation="horizontal", callback=self.changeRepoURL,
+                                             valueType=str, orientation="horizontal", callback=self.change_repo_url,
                                              )
 
         box2 = gui.widgetBox(main_box, orientation="horizontal")
@@ -164,7 +169,7 @@ class RemoteGithubDownloader(oasyswidget.OWWidget):
         left_box = oasysgui.widgetBox(upper_box, "List of workspaces", orientation="vertical",
                                         width=wWidth//2-13, height=wHeight-143)
 
-        self.beamlineList = gui.listBox(left_box, self, "selectedIndex", callback=self.selectedItemListBox)
+        self.beamlineList = gui.listBox(left_box, self, "selectedIndex", callback=self.select_beamline)
 
         right_box = oasysgui.widgetBox(upper_box, "Description", addSpace=True,
                                         orientation="vertical",)
@@ -174,9 +179,7 @@ class RemoteGithubDownloader(oasyswidget.OWWidget):
         self.md_label = "%(metadataLabel)s"
         self.box_metaData = gui.label(right_box, self, self.md_label, orientation="vertical")
 
-
         box3 = gui.widgetBox(main_box, orientation="vertical")
-
         box33 = gui.widgetBox(box3, orientation="horizontal")
         oasysgui.lineEdit(box33, self, "urlselectedfile", "Selected file URL: ", labelWidth=120,
                                              valueType=str, orientation="horizontal",
@@ -191,20 +194,11 @@ class RemoteGithubDownloader(oasyswidget.OWWidget):
 
         gui.rubber(self.controlArea)
 
-        self.changeRepoURL()
+        self.change_repo_url()
 
-    def selectDirectoryFromDialog(self, previous_directory_path="", message="Select Directory", start_directory="."):
-        directory_path = QFileDialog.getExistingDirectory(self, message, start_directory)
-        if not directory_path is None and not directory_path.strip() == "":
-            self.directory = directory_path
-            os.chdir(directory_path)
-        else:
-            self.directory = previous_directory_path
-            os.chdir(previous_directory_path)
+    def change_repo_url(self):
 
-    def changeRepoURL(self):
-
-        self.clearRepoURL()
+        self.clear_repo_url()
 
         try:
             beamlines, url_files, titles, descriptions = get_ows_data(self.repository)
@@ -212,39 +206,36 @@ class RemoteGithubDownloader(oasyswidget.OWWidget):
             QMessageBox.information(self, "Error", "Error retrieving files from " + self.repository, QMessageBox.Ok)
             return
 
-        self.metadataList = descriptions
-        self.urlsOfBeamlines = url_files
-        self.fileList = beamlines
+        self.descriptions = descriptions
+        self.url_files = url_files
+        self.beamlines = beamlines
 
         for i, beamline in enumerate(beamlines):
             currentName = beamline
             self.beamlineList.insertItem(i, currentName)
 
-    def clearRepoURL(self):
+    def clear_repo_url(self):
         self.beamlineList.clear()
         self.selectedIndex = [0]
         self.urlselectedfile = ""
 
 
-    def selectedItemListBox(self):
-        try:
-            self.selectedURL = self.urlsOfBeamlines[self.selectedIndex[0]]
-            self.metadataLabel = self.metadataList[self.selectedIndex[0]]
-            self.selectedFile = self.fileList[self.selectedIndex[0]]
-            self.urlselectedfile = self.selectedURL
-        except:
-            pass
+    def select_beamline(self):
+        if len(self.selectedIndex) > 0:
+            self.metadataLabel   = self.descriptions[self.selectedIndex[0]]
+            self.selectedFile = self.beamlines[self.selectedIndex[0]]
+            self.urlselectedfile = self.url_files[self.selectedIndex[0]]
+        else:
+            self.metadataLabel   = ""
+            self.selectedFile    = ""
+            self.urlselectedfile = ""
 
-    def open_scheme(self):
-        canvas_window = OASYSMainWindow(parent=self, no_update=True)
-        canvas_window.new_scheme()
+
 
     def download_scheme(self):
-
         if self.selectedFile == "":
             QMessageBox.information(self, "Error", "Please select a file", QMessageBox.Ok)
             return
-
 
         filedialog = QtWidgets.QFileDialog(self)
         filename, _ = filedialog.getSaveFileName(self, "Save workspace", self.selectedFile, "Oasys files (*.ows)")
@@ -265,33 +256,31 @@ class RemoteGithubDownloader(oasyswidget.OWWidget):
 
     def set_server(self):
         names, urls = get_usual_servers()
+
         self.repository = urls[self.servers_list]
-        self.changeRepoURL()
+        self.change_repo_url()
 
 
 
 if __name__ == "__main__":
-    # print(get_usual_servers())
-    # server = get_usual_servers()[1][1]
-    # # beamlines, url_files, titles, descriptions = get_ows_data(server)
-    #
-    #
-    # print(server,"\n",get_raw_dir(server))
-    #
-    #
-    # # https://github.com/oasys-kit/ShadowOui-Tutorial/tree/master/OTHER_EXAMPLES
-    # # https://raw.githubusercontent.com/oasys-kit/ShadowOui-Tutorial/master/OTHER_EXAMPLES/CRL_Snigirev_1996.ows
 
-    # for server in get_usual_servers()[1]:
-    #     print("")
-    #     print(">>>>>>>>>>>>>>>>>", server)
-    #     beamlines, url_files, titles, descriptions = get_ows_data(server)
+    if False:
+        names, servers = get_usual_servers()
+        print("names:", names)
+        print("servers:", servers)
+        for server in servers:
+            print("")
+            print(">>>>>>>>>>>>>>>>>server: ", server)
+            if server != "":
+                beamlines, url_files, titles, descriptions = get_ows_data(server)
+                print("          beamlines: ", beamlines)
+                print("          url_files: ", url_files)
+                print("          titles: ", titles)
+                print("          descriptions: ", descriptions)
 
     import sys
     a = QApplication(sys.argv)
     ow = RemoteGithubDownloader()
-    # ow.le_beam_file_name.setText("/users/srio/Oasys/tmp.h5")
-    # ow.workspace_units_to_cm = 100
     ow.show()
     a.exec_()
     ow.saveSettings()
