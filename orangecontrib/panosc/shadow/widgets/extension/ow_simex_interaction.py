@@ -29,7 +29,7 @@ import warnings
 class CalculateWithSimEx(oasyswidget.OWWidget):
     name = "Run SimEx Calculation"
     description = "Utility: Seamless interaction with SimEx calculators"
-    icon = "icons/python_script.png"
+    icon = "icons/simex_interactor.png"
     maintainer = "Aljosa Hafner"
     maintainer_email = "aljosa.hafner(@at@)ceric-eric.eu"
     priority = 10
