@@ -20,6 +20,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from matplotlib import cm
+import json
 
 import warnings
 
@@ -37,6 +38,7 @@ class CalculateWithSimEx(oasyswidget.OWWidget):
 
     want_main_area = 0
     beam_file_name = Setting("")
+    input_file = Setting("params.json")
     gapd_sample_file = Setting("single-cu.xyz")
     gapd_output_file = Setting("diffr_poly_1.txt")
     select_input = 0
@@ -132,6 +134,10 @@ class CalculateWithSimEx(oasyswidget.OWWidget):
         self.use_SelectCalculator_GAPD_empty = oasysgui.widgetBox(left_box_2, "", addSpace=False, addToLayout=False, width=0)
         self.use_SelectCalculator_GAPD = oasysgui.widgetBox(left_box_2, "", addSpace=False, orientation="vertical", width=600)
 
+        self.le_input_box = oasysgui.widgetBox(self.use_SelectCalculator_GAPD, "", addSpace=False, orientation="horizontal", width=600)
+        self.le_input = oasysgui.lineEdit(self.le_input_box, self, "input_file", "Input JSON File", labelWidth=120, valueType=str, orientation="horizontal")
+        gui.button(self.le_input_box, self, "...", callback=self.selectFileInput)
+
         self.le_gapd_sample_box = oasysgui.widgetBox(self.use_SelectCalculator_GAPD, "", addSpace=False, orientation="horizontal", width=600)
         self.le_gapd_sample = oasysgui.lineEdit(self.le_gapd_sample_box, self, "gapd_sample_file", "Sample File [xyz]", labelWidth=120, valueType=str, orientation="horizontal")
         gui.button(self.le_gapd_sample_box, self, "...", callback=self.selectFileGAPDSample)
@@ -161,6 +167,8 @@ class CalculateWithSimEx(oasyswidget.OWWidget):
     def selectFile(self):
         self.le_beam_file_name.setText(oasysgui.selectFileFromDialog(self, self.beam_file_name, "Open Shadow File"))
 
+    def selectFileInput(self):
+        self.le_input.setText(oasysgui.selectFileFromDialog(self, self.input_file, "Select Input File"))
     def selectFileGAPDSample(self):
         self.le_gapd_sample.setText(oasysgui.selectFileFromDialog(self, self.gapd_sample_file, "Select GAPD Sample File"))
     def selectFileGAPDOutput(self):
@@ -244,7 +252,12 @@ class CalculateWithSimEx(oasyswidget.OWWidget):
             plt.show()
         except Exception as exception:
             QtWidgets.QMessageBox.critical(self, "Error: Cannot Read File", str(exception), QtWidgets.QMessageBox.Ok)
-    
+
+    def importJson(self, filePath):
+        with open(filePath, 'r') as j:
+            jsonAsDict = json.loads(j.read())
+        return jsonAsDict
+
     def calculateSimEx(self):
 
         try:
@@ -254,21 +267,25 @@ class CalculateWithSimEx(oasyswidget.OWWidget):
             from SimEx.Utilities.Units import meter, electronvolt, joule, radian
             QMessageBox.information(self, "Import Successful", "GAPD was successfully imported!", QMessageBox.Ok)
 
-            self.setStatusMessage("Preprocessing")
+            self.setStatusMessage("Reading JSON file")
+
+            paramsDict = self.importJson(self.input_file)
+
+            self.setStatusMessage("Parameters loaded")
 
             detector_panel = DetectorPanel(
                 ranges={
-                    'fast_scan_min': 0,
-                    'fast_scan_max': 200,
-                    'slow_scan_min': 0,
-                    'slow_scan_max': 200
+                    'fast_scan_min': paramsDict['Detector']['fast_scan_min'],
+                    'fast_scan_max': paramsDict['Detector']['fast_scan_max'],
+                    'slow_scan_min': paramsDict['Detector']['slow_scan_min'],
+                    'slow_scan_max': paramsDict['Detector']['slow_scan_max']
                 },
-                pixel_size=2200e-6 * meter,
+                pixel_size=paramsDict['Detector']['pixel_size [um]'] * 1e-6 * meter,
                 photon_response=1.0,
-                distance_from_interaction_plane=0.25 * meter,
+                distance_from_interaction_plane=paramsDict['Detector']['Sample to detector distance [mm]'] * 1e-3 * meter,
                 corners={
-                    'x': -100,
-                    'y': -100
+                    'x': paramsDict['Detector']['corner_x'],
+                    'y': paramsDict['Detector']['corner_y']
                 },
             )
             detector_geometry = DetectorGeometry(panels=[detector_panel])

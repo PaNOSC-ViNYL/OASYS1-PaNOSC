@@ -1,0 +1,23 @@
+{
+  "Sample":{
+  "File format": "cfg",
+  "File name": "single-cu.cfg"
+  },
+  "Detector":{
+    "fast_scan_min": 0,
+    "fast_scan_max": 200,
+    "slow_scan_min": 0,
+    "slow_scan_max": 200,
+    "pixel_size [um]": 2200,
+    "Sample to detector distance [mm]": 250,
+    "corner_x": -100,
+    "corner_y": 100
+  },
+  "Beam":{
+    "Incidence direction": [0, 0, -1],
+    "Transverse diraction": [0, 1, 0]
+  },
+  "GAPDparameters":{
+    "Output file name": "diffr"
+  }
+}
